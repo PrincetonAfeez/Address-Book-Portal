@@ -1,0 +1,70 @@
+<tr id="contact-{{ contact.id }}" class="hover:bg-slate-50">
+  <td class="px-3 py-3">
+    <input type="checkbox"
+           aria-label="Select {{ contact.display_name }}"
+           {% if contact.id|stringformat:'s' in selected_ids %}checked{% endif %}
+           hx-post="{% url 'contacts:selection_toggle' %}"
+           hx-target="#contact-table-body"
+           hx-swap="innerHTML"
+           hx-indicator="#table-indicator"
+           hx-vals='js:{"contact_id": "{{ contact.id }}", "list_mode": "{{ mode }}", "selected": event.target.checked}'>
+  </td>
+  <td class="px-3 py-3">
+    <a class="flex min-w-0 items-center gap-3" href="{{ contact.get_absolute_url }}">
+      {% if contact.photo %}
+        <img class="avatar" src="{{ contact.photo.url }}" alt="">
+      {% else %}
+        <span class="avatar">{{ contact.initials }}</span>
+      {% endif %}
+      <span class="min-w-0">
+        <span class="block truncate font-medium text-slate-950">{{ contact.display_name }}</span>
+        <span class="block truncate text-xs text-slate-500">{{ contact.job_title|default:"No title" }}</span>
+      </span>
+    </a>
+  </td>
+  <td class="px-3 py-3 text-sm text-slate-700">{{ contact.company|default:"-" }}</td>
+  <td class="hidden px-3 py-3 text-sm text-slate-700 md:table-cell">{{ contact.email|default:"-" }}</td>
+  <td class="hidden px-3 py-3 text-sm text-slate-700 lg:table-cell">{{ contact.phone|default:"-" }}</td>
+  <td class="hidden px-3 py-3 text-sm text-slate-500 sm:table-cell">{{ contact.created_at|date:"M j, Y" }}</td>
+  <td class="px-3 py-3 text-sm text-slate-500">{{ contact.updated_at|date:"M j, Y" }}</td>
+  <td class="px-3 py-3">
+    <div class="flex justify-end gap-1">
+      <form hx-post="{% url 'contacts:favorite' contact.pk %}?{{ request.GET.urlencode }}"
+            hx-target="#contact-table-body"
+            hx-swap="innerHTML"
+            hx-indicator="#table-indicator">
+        <input type="hidden" name="list_mode" value="{{ mode }}">
+        <button class="icon-button small" type="submit" title="Favorite" aria-label="Favorite">
+          <i data-lucide="star" class="{% if contact.is_favorite %}fill-amber-400 text-amber-400{% else %}text-slate-400{% endif %}"></i>
+        </button>
+      </form>
+      <button class="icon-button small" type="button" title="Edit" aria-label="Edit"
+              hx-get="{% url 'contacts:edit' contact.pk %}?{{ request.GET.urlencode }}&list_mode={{ mode }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        <i data-lucide="pencil"></i>
+      </button>
+      {% if mode == "archive" %}
+        <form hx-post="{% url 'contacts:restore' contact.pk %}?{{ request.GET.urlencode }}"
+              hx-target="#contact-table-body"
+              hx-swap="innerHTML"
+              hx-indicator="#table-indicator">
+          <input type="hidden" name="list_mode" value="{{ mode }}">
+          <button class="icon-button small" type="submit" title="Restore" aria-label="Restore">
+            <i data-lucide="archive-restore"></i>
+          </button>
+        </form>
+      {% else %}
+        <form hx-post="{% url 'contacts:delete' contact.pk %}?{{ request.GET.urlencode }}"
+              hx-target="#contact-table-body"
+              hx-swap="innerHTML"
+              hx-indicator="#table-indicator"
+              hx-confirm="Move this contact to archive?">
+          <input type="hidden" name="list_mode" value="{{ mode }}">
+          <button class="icon-button small danger" type="submit" title="Archive" aria-label="Archive">
+            <i data-lucide="archive"></i>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </td>
+</tr>

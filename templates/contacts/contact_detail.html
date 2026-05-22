@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.display_name }} - Address Book Portal{% endblock %}
+{% block content %}
+<article class="space-y-5">
+  <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+    <div class="flex items-center gap-4">
+      {% if contact.photo %}
+        <img class="h-20 w-20 rounded object-cover" src="{{ contact.photo.url }}" alt="">
+      {% else %}
+        <span class="grid h-20 w-20 place-items-center rounded bg-emerald-600 text-2xl font-bold text-white">{{ contact.initials }}</span>
+      {% endif %}
+      <div>
+        <h1 class="page-title">{{ contact.display_name }}</h1>
+        <p class="page-subtitle">
+          {{ contact.job_title|default:"No title" }}{% if contact.company %} at {{ contact.company }}{% endif %}
+          {% if contact.is_archived %} · <span class="text-rose-700">Archived</span>{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a class="button-secondary" href="{% url 'contacts:vcard_one' contact.pk %}">
+        <i data-lucide="contact"></i>
+        vCard
+      </a>
+      <button class="button-primary" hx-get="{% url 'contacts:edit' contact.pk %}" hx-target="#modal-root" hx-swap="innerHTML">
+        <i data-lucide="pencil"></i>
+        Edit
+      </button>
+    </div>
+  </div>
+
+  <section class="grid gap-5 lg:grid-cols-3">
+    <div class="panel lg:col-span-2">
+      <h2 class="panel-title">Details</h2>
+      <dl class="detail-grid">
+        <dt>Primary email</dt><dd>{{ contact.email|default:"-" }}</dd>
+        <dt>Primary phone</dt><dd>{{ contact.phone|default:"-" }}</dd>
+        <dt>Company</dt><dd>{{ contact.company|default:"-" }}</dd>
+        <dt>Birthday</dt><dd>{{ contact.birthday|date:"M j, Y"|default:"-" }}</dd>
+        <dt>Notes</dt><dd class="whitespace-pre-wrap">{{ contact.notes|default:"-" }}</dd>
+      </dl>
+      {% if contact.emails.exists %}
+        <h3 class="filter-title mt-6">All emails</h3>
+        <ul class="space-y-1 text-sm text-slate-700">
+          {% for email in contact.emails.all %}
+            <li>{{ email.get_label_display }}: {{ email.address }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if contact.phones.exists %}
+        <h3 class="filter-title mt-6">All phones</h3>
+        <ul class="space-y-1 text-sm text-slate-700">
+          {% for phone in contact.phones.all %}
+            <li>{{ phone.get_label_display }}: {{ phone.number }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">Organization</h2>
+      <div class="space-y-4">
+        <div>
+          <h3 class="filter-title">Groups</h3>
+          <div class="chip-wrap">
+            {% for group in contact.groups.all %}
+              <span class="chip">{{ group.name }}</span>
+            {% empty %}
+              <p class="empty-state">No groups.</p>
+            {% endfor %}
+          </div>
+        </div>
+        <div>
+          <h3 class="filter-title">Tags</h3>
+          <div class="chip-wrap">
+            {% for tag in contact.tags.all %}
+              <span class="chip"><span class="h-2 w-2 rounded-full" style="background: {{ tag.color }}"></span>{{ tag.name }}</span>
+            {% empty %}
+              <p class="empty-state">No tags.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</article>
+{% endblock %}

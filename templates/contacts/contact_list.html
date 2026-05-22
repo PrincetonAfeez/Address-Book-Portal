@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load querystring %}
+{% block title %}Contacts - Address Book Portal{% endblock %}
+{% block content %}
+<div class="space-y-5">
+  <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+    <div>
+      <h1 class="page-title">
+        {% if mode == "archive" %}Archive{% elif mode == "favorites" %}Favorites{% else %}Contacts{% endif %}
+      </h1>
+      <p id="contacts-count" class="page-subtitle">
+        {% if paginator.count %}
+          Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} contacts
+        {% else %}
+          No contacts yet — add your first one
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a class="button-secondary" href="{% url 'contacts:csv_export' %}?mode={{ mode }}&{{ request.GET.urlencode }}">
+        <i data-lucide="file-down"></i>
+        CSV
+      </a>
+      <a class="button-secondary" href="{% url 'contacts:vcard_bulk' %}?mode={{ mode }}&{{ request.GET.urlencode }}">
+        <i data-lucide="contact"></i>
+        vCard
+      </a>
+      <button class="button-primary"
+              hx-get="{% url 'contacts:create' %}?{{ request.GET.urlencode }}&list_mode={{ mode }}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML">
+        <i data-lucide="plus"></i>
+        Add contact
+      </button>
+    </div>
+  </div>
+
+  <div class="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+    {% include "contacts/partials/_filter_sidebar.html" %}
+    <section class="space-y-3">
+      <div class="panel">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <form class="relative flex-1"
+                hx-get="{{ request.path }}"
+                hx-target="#contact-table-body"
+                hx-swap="innerHTML"
+                hx-indicator="#table-indicator"
+                hx-trigger="keyup changed delay:250ms from:#search, submit">
+            <input id="search" class="input" type="search" name="q" value="{{ query }}" placeholder="Search contacts">
+            {% if request.GET.group %}<input type="hidden" name="group" value="{{ request.GET.group }}">{% endif %}
+            {% if request.GET.tag %}<input type="hidden" name="tag" value="{{ request.GET.tag }}">{% endif %}
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+            {% if request.GET.dir %}<input type="hidden" name="dir" value="{{ request.GET.dir }}">{% endif %}
+            <span id="table-indicator" class="htmx-indicator absolute right-3 top-3 text-xs text-slate-500">Searching…</span>
+          </form>
+          {% include "contacts/partials/_bulk_bar.html" %}
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded border border-slate-200 bg-white">
+        <table class="min-w-full divide-y divide-slate-200">
+          <thead class="bg-slate-100 text-left text-xs font-semibold uppercase text-slate-600">
+            <tr>
+              <th class="w-10 px-3 py-3">
+                <form hx-post="{% url 'contacts:selection_page' %}?{{ request.GET.urlencode }}"
+                      hx-target="#contact-table-body"
+                      hx-swap="innerHTML"
+                      hx-indicator="#table-indicator">
+                  {% for contact in contacts %}
+                    <input type="hidden" name="contact_ids" value="{{ contact.id }}">
+                  {% endfor %}
+                  <input type="hidden" name="list_mode" value="{{ mode }}">
+                  <input type="hidden" name="selected" value="{% if page_all_selected %}false{% else %}true{% endif %}">
+                  <input type="checkbox"
+                         aria-label="Select all on page"
+                         {% if page_all_selected %}checked{% endif %}
+                         onchange="this.form.requestSubmit()">
+                </form>
+              </th>
+              <th class="px-3 py-3"><a href="{% sort_link 'name' 'asc' %}">Name {% sort_indicator 'name' %}</a></th>
+              <th class="px-3 py-3"><a href="{% sort_link 'company' 'asc' %}">Company {% sort_indicator 'company' %}</a></th>
+              <th class="px-3 py-3 hidden md:table-cell">Email</th>
+              <th class="px-3 py-3 hidden lg:table-cell">Phone</th>
+              <th class="px-3 py-3 hidden sm:table-cell"><a href="{% sort_link 'created' 'desc' %}">Created {% sort_indicator 'created' %}</a></th>
+              <th class="px-3 py-3"><a href="{% sort_link 'updated' 'desc' %}">Updated {% sort_indicator 'updated' %}</a></th>
+              <th class="px-3 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="contact-table-body" class="divide-y divide-slate-100 bg-white">
+            {% include "contacts/partials/_contact_rows.html" %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+        <div class="flex gap-2">
+          {% if page_obj.has_previous %}
+            <a class="button-secondary" href="?{% qs_replace page=page_obj.previous_page_number %}">Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a class="button-secondary" href="?{% qs_replace page=page_obj.next_page_number %}">Next</a>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

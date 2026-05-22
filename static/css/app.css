@@ -1,0 +1,253 @@
+input,
+select,
+textarea {
+  border: 1px solid rgb(203 213 225);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+input[type="checkbox"] {
+  width: auto;
+}
+
+.button-primary,
+.button-secondary,
+.nav-link,
+.icon-button,
+.filter-link {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.button-primary {
+  background: rgb(5 150 105);
+  color: white;
+  font-weight: 650;
+  padding: 0.55rem 0.85rem;
+}
+
+.button-primary:hover {
+  background: rgb(4 120 87);
+}
+
+.button-secondary {
+  background: white;
+  border: 1px solid rgb(203 213 225);
+  color: rgb(15 23 42);
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+}
+
+.button-secondary:hover,
+.nav-link:hover,
+.filter-link:hover,
+.icon-button:hover {
+  background: rgb(241 245 249);
+}
+
+.nav-link {
+  color: rgb(51 65 85);
+  padding: 0.45rem 0.65rem;
+}
+
+.icon-button {
+  border: 1px solid rgb(203 213 225);
+  color: rgb(51 65 85);
+  justify-content: center;
+  padding: 0.45rem;
+}
+
+.icon-button.small {
+  min-height: 1.9rem;
+  padding: 0.3rem;
+}
+
+.icon-button.danger {
+  color: rgb(190 18 60);
+}
+
+.icon-button svg,
+.button-primary svg,
+.button-secondary svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.panel {
+  background: white;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.panel-title {
+  color: rgb(15 23 42);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.page-title {
+  color: rgb(15 23 42);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  color: rgb(71 85 105);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.input {
+  min-height: 2.5rem;
+}
+
+.metric {
+  background: white;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+}
+
+.metric span {
+  color: rgb(71 85 105);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.metric strong {
+  color: rgb(15 23 42);
+  font-size: 1.8rem;
+}
+
+.avatar {
+  align-items: center;
+  background: rgb(5 150 105);
+  border-radius: 6px;
+  color: white;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 800;
+  height: 2.35rem;
+  justify-content: center;
+  object-fit: cover;
+  width: 2.35rem;
+}
+
+.compact-row {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.45rem;
+}
+
+.compact-row:hover {
+  background: rgb(248 250 252);
+}
+
+.empty-state {
+  color: rgb(100 116 139);
+  font-size: 0.9rem;
+}
+
+.filter-title {
+  color: rgb(71 85 105);
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+}
+
+.filter-link {
+  color: rgb(51 65 85);
+  font-size: 0.9rem;
+  padding: 0.45rem 0.5rem;
+  width: 100%;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: minmax(90px, 140px) minmax(0, 1fr);
+  margin-top: 1rem;
+}
+
+.detail-grid dt {
+  color: rgb(71 85 105);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.detail-grid dd {
+  color: rgb(15 23 42);
+  min-width: 0;
+}
+
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  align-items: center;
+  background: rgb(240 253 244);
+  border: 1px solid rgb(187 247 208);
+  border-radius: 999px;
+  color: rgb(20 83 45);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 650;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.toast {
+  background: white;
+  border: 1px solid rgb(203 213 225);
+  border-left: 4px solid rgb(5 150 105);
+  border-radius: 6px;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 0.08);
+  color: rgb(15 23 42);
+  max-width: 22rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.toast.error {
+  border-left-color: rgb(225 29 72);
+}
+
+.link {
+  color: rgb(4 120 87);
+  font-weight: 650;
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Import CSV - Address Book Portal{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-5">
+  <div>
+    <h1 class="page-title">Import CSV</h1>
+    <p class="page-subtitle">Valid rows are saved; failed rows stay in the report.</p>
+  </div>
+  <div class="panel">
+    <form class="stack" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% include "partials/form_errors.html" with form=form %}
+      {% include "partials/field.html" with field=form.file %}
+      <button class="button-primary" type="submit">
+        <i data-lucide="upload"></i>
+        Import
+      </button>
+    </form>
+  </div>
+  {% if result %}
+    <div class="panel">
+      <h2 class="panel-title">{{ result.imported_count }} imported, {{ result.failed_count }} failed</h2>
+      {% if result.errors %}
+        <a class="button-secondary mt-3" href="{% url 'contacts:csv_error_report' %}">
+          <i data-lucide="file-warning"></i>
+          Error report
+        </a>
+        <div class="mt-4 overflow-hidden rounded border border-slate-200">
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-100 text-left font-semibold text-slate-600">
+              <tr><th class="px-3 py-2">Row</th><th class="px-3 py-2">Errors</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for error in result.errors %}
+                <tr>
+                  <td class="px-3 py-2">{{ error.row_number }}</td>
+                  <td class="px-3 py-2">{{ error.errors }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$335YKGwftpB9mzVzC2igKv$iaP5y593mtuGeA4miTGO7906gfvObpNPz9TRIec7T1A=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "demo",
+      "first_name": "",
+      "last_name": "",
+      "email": "demo@example.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-01-01T00:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "contacts.contact",
+    "pk": 1,
+    "fields": {
+      "owner": 1,
+      "first_name": "Ada",
+      "last_name": "Lovelace",
+      "email": "ada@example.com",
+      "phone": "+14155552671",
+      "company": "Analytical Engines Ltd.",
+      "job_title": "Mathematician",
+      "notes": "Seed contact for local development.",
+      "birthday": "1815-12-10",
+      "photo": "",
+      "is_favorite": true,
+      "is_archived": false,
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "contacts.phone",
+    "pk": 1,
+    "fields": {
+      "contact": 1,
+      "number": "+14155552671",
+      "label": "mobile"
+    }
+  },
+  {
+    "model": "contacts.email",
+    "pk": 1,
+    "fields": {
+      "contact": 1,
+      "address": "ada@example.com",
+      "label": "other"
+    }
+  },
+  {
+    "model": "contacts.group",
+    "pk": 1,
+    "fields": {
+      "owner": 1,
+      "name": "Friends",
+      "contacts": [1]
+    }
+  },
+  {
+    "model": "contacts.tag",
+    "pk": 1,
+    "fields": {
+      "owner": 1,
+      "name": "VIP",
+      "color": "#10b981",
+      "contacts": [1]
+    }
+  }
+]

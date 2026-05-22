@@ -1,0 +1,18 @@
+{% if selected_count %}
+<form id="bulk-bar" class="flex flex-wrap items-center gap-2"
+      hx-post="{% url 'contacts:bulk_action' %}?{{ request.GET.urlencode }}"
+      hx-target="#contact-table-body"
+      hx-swap="innerHTML"
+      hx-indicator="#table-indicator">
+  <input type="hidden" name="list_mode" value="{{ list_mode|default:'active' }}">
+  <span id="selected-count" class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
+  {{ bulk_form.action }}
+  {{ bulk_form.group }}
+  {{ bulk_form.tag }}
+  <button class="icon-button" type="submit" title="Apply bulk action" aria-label="Apply bulk action">
+    <i data-lucide="play"></i>
+  </button>
+</form>
+{% else %}
+<div id="bulk-bar"></div>
+{% endif %}

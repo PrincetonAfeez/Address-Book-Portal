@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Log in - Address Book Portal{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-md">
+  <div class="panel">
+    <h1 class="panel-title">Log in</h1>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {% include "partials/form_errors.html" with form=form %}
+      {% for field in form %}
+        {% include "partials/field.html" with field=field %}
+      {% endfor %}
+      <button class="button-primary w-full" type="submit">Log in</button>
+    </form>
+    <div class="mt-4 flex items-center justify-between text-sm">
+      <a class="link" href="{% url 'password_reset' %}">Reset password</a>
+      <a class="link" href="{% url 'signup' %}">Create account</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

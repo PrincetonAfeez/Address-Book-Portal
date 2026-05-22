@@ -1,0 +1,36 @@
+{% load querystring %}
+<aside class="space-y-4">
+  <div class="panel">
+    <h2 class="filter-title">Views</h2>
+    <div class="space-y-1">
+      <a class="filter-link" href="{% url 'contacts:list' %}">All contacts</a>
+      <a class="filter-link" href="{% url 'contacts:favorites' %}">Favorites</a>
+      <a class="filter-link" href="{% url 'contacts:archive' %}">Archive</a>
+    </div>
+  </div>
+  <div class="panel">
+    <h2 class="filter-title">Groups</h2>
+    <div class="space-y-1">
+      <a class="filter-link" href="?{% qs_replace group='' page='' %}">All groups</a>
+      {% for group in groups %}
+        <a class="filter-link" href="?{% qs_replace group=group.id page='' %}">{{ group.name }}</a>
+      {% empty %}
+        <p class="empty-state">No groups yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <h2 class="filter-title">Tags</h2>
+    <div class="space-y-1">
+      <a class="filter-link" href="?{% qs_replace tag='' page='' %}">All tags</a>
+      {% for tag in tags %}
+        <a class="filter-link" href="?{% qs_replace tag=tag.id page='' %}">
+          <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {{ tag.color }}"></span>
+          {{ tag.name }}
+        </a>
+      {% empty %}
+        <p class="empty-state">No tags yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</aside>

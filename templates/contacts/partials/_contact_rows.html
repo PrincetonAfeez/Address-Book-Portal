@@ -1,0 +1,26 @@
+{% if is_htmx %}
+  <span id="selected-count" hx-swap-oob="outerHTML" class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
+  <p id="contacts-count" hx-swap-oob="outerHTML" class="page-subtitle">
+    {% if paginator.count %}
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} contacts
+    {% else %}
+      No contacts yet — add your first one
+    {% endif %}
+  </p>
+  <div id="bulk-bar" hx-swap-oob="outerHTML">
+    {% include "contacts/partials/_bulk_bar.html" %}
+  </div>
+  <div id="toast-stack" hx-swap-oob="beforeend">
+    {% include "partials/messages.html" %}
+  </div>
+  <div id="modal-root" hx-swap-oob="innerHTML"></div>
+{% endif %}
+{% for contact in contacts %}
+  {% include "contacts/partials/_contact_row.html" with contact=contact %}
+{% empty %}
+  <tr>
+    <td colspan="8" class="px-6 py-12 text-center">
+      <p class="empty-state">No contacts yet — add your first one</p>
+    </td>
+  </tr>
+{% endfor %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Organize - Address Book Portal{% endblock %}
+{% block content %}
+<div class="space-y-5">
+  <div>
+    <h1 class="page-title">Organize</h1>
+    <p class="page-subtitle">Groups and tags for filtering and bulk updates.</p>
+  </div>
+  <div class="grid gap-5 lg:grid-cols-2">
+    <section class="panel">
+      <h2 class="panel-title">Groups</h2>
+      <form class="mt-4 flex flex-col gap-2" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="group">
+        {% include "partials/form_errors.html" with form=group_form %}
+        <div class="flex items-start gap-2">
+          <div class="flex-1">{% include "partials/field.html" with field=group_form.name %}</div>
+          <button class="icon-button mt-6" type="submit" title="Add group" aria-label="Add group">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+      </form>
+      <div class="mt-4 divide-y divide-slate-100">
+        {% for group in groups %}
+          <div class="flex items-center justify-between gap-3 py-2">
+            <span class="font-medium text-slate-800">{{ group.name }}</span>
+            <form method="post" action="{% url 'contacts:group_delete' group.pk %}">
+              {% csrf_token %}
+              <button class="icon-button small danger" type="submit" title="Delete group" aria-label="Delete group">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </form>
+          </div>
+        {% empty %}
+          <p class="empty-state mt-4">No groups yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="panel">
+      <h2 class="panel-title">Tags</h2>
+      <form class="mt-4 grid gap-2" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="tag">
+        {% include "partials/form_errors.html" with form=tag_form %}
+        <div class="grid gap-2 sm:grid-cols-[1fr_4rem_auto]">
+          {% include "partials/field.html" with field=tag_form.name %}
+          {% include "partials/field.html" with field=tag_form.color %}
+          <button class="icon-button mt-6" type="submit" title="Add tag" aria-label="Add tag">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+      </form>
+      <div class="mt-4 divide-y divide-slate-100">
+        {% for tag in tags %}
+          <div class="flex items-center justify-between gap-3 py-2">
+            <span class="chip"><span class="h-2 w-2 rounded-full" style="background: {{ tag.color }}"></span>{{ tag.name }}</span>
+            <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}">
+              {% csrf_token %}
+              <button class="icon-button small danger" type="submit" title="Delete tag" aria-label="Delete tag">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </form>
+          </div>
+        {% empty %}
+          <p class="empty-state mt-4">No tags yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

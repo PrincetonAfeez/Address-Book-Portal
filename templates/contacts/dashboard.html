@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Address Book Portal{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">A quick pulse on your contacts.</p>
+    </div>
+    <button class="button-primary" hx-get="{% url 'contacts:create' %}" hx-target="#modal-root" hx-swap="innerHTML">
+      <i data-lucide="plus"></i>
+      Add contact
+    </button>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-3">
+    <div class="metric"><span>Contacts</span><strong>{{ total_contacts }}</strong></div>
+    <div class="metric"><span>Groups</span><strong>{{ total_groups }}</strong></div>
+    <div class="metric"><span>Tags</span><strong>{{ total_tags }}</strong></div>
+  </section>
+
+  <section class="grid gap-6 lg:grid-cols-3">
+    <div class="panel">
+      <h2 class="panel-title">Recent additions</h2>
+      {% include "contacts/partials/_compact_contact_list.html" with contacts=recent_additions empty="No recent additions" %}
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">Upcoming birthdays</h2>
+      <div class="space-y-3">
+        {% for birthday, contact in upcoming_birthdays %}
+          <a class="compact-row" href="{{ contact.get_absolute_url }}">
+            <span class="avatar">{{ contact.initials }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ contact.display_name }}</span>
+            <span class="text-xs text-slate-500">{{ birthday|date:"M j" }}</span>
+          </a>
+        {% empty %}
+          <p class="empty-state">No birthdays soon.</p>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">Recently updated</h2>
+      {% include "contacts/partials/_compact_contact_list.html" with contacts=recently_updated empty="No updates yet" %}
+    </div>
+  </section>
+</div>
+{% endblock %}
