@@ -1,0 +1,145 @@
+Address Book Portal
+Stack
+
+Backend: Python 3.12, Django 5
+Frontend: Django templates + HTMX, Tailwind CSS
+Database: PostgreSQL (prod), SQLite (dev)
+Hosting: Railway
+Dependencies: Deliberately minimal — Django, psycopg, python-dotenv, Pillow (for photo upload), gunicorn, whitenoise. No phonenumbers, no vobject, no DRF.
+
+
+Infrastructure & Setup
+
+Project scaffold with split settings (base.py, dev.py, prod.py)
+.env for secrets via python-dotenv
+PostgreSQL in production, SQLite in development
+Logging configured (file + console handlers, not print())
+Static and media file handling configured for both environments
+Railway deployment with environment variables
+
+Authentication & Ownership
+
+Signup, login, logout using Django's built-in auth
+Password reset flow (email-based)
+Per-user ownership: every contact, group, and tag scoped to request.user
+Queryset filtering enforced at the manager level, not view-by-view
+403 on cross-user access attempts
+
+Data Model
+
+Contact: first_name, last_name, email, phone, company, job_title, notes, birthday, photo, is_favorite, is_archived, created_at, updated_at, owner (FK)
+Phone: contact (FK), number, label (mobile/work/home) — one-to-many
+Email: contact (FK), address, label — one-to-many
+Group: name, owner (FK), M2M to Contact (the "groups" from your spec)
+Tag: name, color, owner (FK), M2M to Contact (lighter-weight categorization)
+Admin registration for all models with sensible list displays and filters
+Seed fixtures for local development
+
+Contact CRUD
+
+Create, view, edit, delete contact
+HTMX modal forms for add and edit (no full page reload)
+HTMX inline delete confirmation (no separate confirm page)
+Soft delete by default — moves to archive, not gone
+
+List View
+
+Server-rendered table
+Sortable column headers (name, company, created, updated)
+Pagination at 25 per page
+Pagination preserves both search query and sort params
+Custom {% qs_replace %} template tag handling param replacement cleanly
+Q-object search across first_name, last_name, email, company, phone numbers, and email addresses — case-insensitive
+HTMX live search: results swap into <tbody> only, header stays put
+hx-swap-oob updates the "X of Y contacts" count outside the table swap
+
+Filtering & Organization
+
+Group filter sidebar — click a group, list filters down
+Tag filter sidebar with color chips
+Favorites view (starred contacts only)
+Archive view (soft-deleted contacts) with restore action
+Combined filtering: search + group + tag + favorites all stack
+
+Bulk Actions
+
+Checkbox per row + select-all header checkbox
+Selection state preserved across pagination (server-side selection set)
+Bulk action bar appears when items are selected
+Actions: bulk archive (soft delete), bulk delete permanently (archive view only), bulk add-to-group, bulk add-tag, bulk remove-tag
+Count of selected items updates via OOB swap
+
+Phone Validation (hand-rolled)
+
+Custom validator written from scratch — no phonenumbers library
+Strips formatting characters (spaces, dashes, parens, dots)
+Validates E.164-style format and US 10-digit format
+Normalizes to a single storage format
+Returns clear field-level error messages
+Unit tested against a table of valid and invalid inputs
+
+CSV Import
+
+Upload form accepts CSV
+Streaming parser — never loads the full file into memory
+Per-row validation using model and custom validators
+Errors collected with row numbers and field-level messages
+Error summary page: "847 imported, 23 failed" + downloadable error report
+Partial-success semantics: valid rows commit, invalid rows reported
+Column mapping for common variants (First Name / first_name / FirstName)
+
+CSV Export
+
+StreamingHttpResponse so 50,000 contacts don't blow up memory
+Respects current filter/search state — exports what you see
+Generator-based row yielding
+
+vCard Export
+
+Hand-rolled vCard 3.0 generator — no vobject or python-vobject
+Handles RFC 6350 essentials: line folding at 75 chars, comma/semicolon escaping, multi-value fields
+Single contact export and bulk export
+Unit tested against a few known-good reference vCards
+
+Photo Upload
+
+One photo per contact via Pillow
+Resize on upload (max 800x800)
+Default avatar with initials when no photo
+Stored under per-user media directory
+
+Dashboard
+
+Total contacts, total groups, total tags
+Recent additions (last 7 days)
+Upcoming birthdays (next 30 days) with day-of-year math that handles year wraparound
+Recently updated contacts
+
+Styling
+
+Tailwind CSS, no component library
+Responsive: works on phone, tablet, desktop
+Dark mode optional (only if buffer holds)
+Consistent spacing, typography, and color tokens
+Empty states for every list view ("No contacts yet — add your first one")
+Loading indicators on HTMX requests
+Toast notifications for success/error after mutations
+
+Tests
+
+Model tests (ownership, soft delete, M2M relationships)
+Phone validator tests (table-driven)
+CSV import tests (valid file, malformed rows, oversized file)
+CSV export tests (streaming behavior, filter preservation)
+vCard generator tests (escaping, line folding)
+View tests (auth required, cross-user access blocked)
+HTMX endpoint tests (partial template responses)
+Target ~50% coverage — focused on the parts that would hurt if they broke
+
+Documentation
+
+README: what it is, screenshots, local setup, env vars, run instructions, deploy notes, test commands
+ADR 1: Why HTMX over a JS framework (SPA tax vs. hypermedia, team-of-one reality)
+ADR 2: Why hand-rolled phone validation and vCard generation (zero-dependency surface, learning value, scope of needed subset)
+ADR 3: Why per-user ownership over RBAC for v1 (YAGNI — single-tenant is the right shape until it isn't)
+docs/ folder structure mirroring how real teams organize ADRs

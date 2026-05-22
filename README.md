@@ -4,7 +4,7 @@ A Django 5 address book with server-rendered templates, HTMX interactions, per-u
 
 ## Stack
 
-- Python 3.12+
+- Python 3.12+ (`pyproject.toml`)
 - Django 5
 - Django templates + HTMX
 - Tailwind CSS via CDN
@@ -14,14 +14,23 @@ A Django 5 address book with server-rendered templates, HTMX interactions, per-u
 
 ## Local Setup
 
+Dependencies are defined in [`pyproject.toml`](pyproject.toml). Use an editable install so pytest and coverage pick up project settings from the same file.
+
 ```powershell
 python -m venv .venv
 .\\.venv\\Scripts\\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
 Copy-Item .env.example .env
 python manage.py migrate
 python manage.py loaddata seed_data
 python manage.py runserver
+```
+
+Production-only install (no test tools):
+
+```powershell
+pip install -r requirements.txt
 ```
 
 The seed user is `demo` with password `demo-password`.

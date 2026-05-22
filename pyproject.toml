@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "address-book-portal"
+version = "1.0.0"
+description = "Django 5 address book with HTMX, CSV/vCard import/export, and per-user ownership."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<6.0",
+    "Pillow>=10.0",
+    "psycopg[binary]>=3.1",
+    "python-dotenv>=1.0",
+    "gunicorn>=22.0",
+    "whitenoise>=6.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage>=7.0",
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["config*", "contacts*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["contacts", "config"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "manage.py",
+    "config/asgi.py",
+    "config/wsgi.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 1
+fail_under = 85

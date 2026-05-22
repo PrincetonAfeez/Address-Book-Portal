@@ -11,7 +11,7 @@ As of the latest run: **162 tests**, all passing (Django test runner and pytest)
 
 ## Coverage
 
-Coverage is configured in [`.coveragerc`](../.coveragerc). It measures the `contacts` and `config` packages and omits migrations, test modules, and WSGI/ASGI entry points.
+Coverage is configured in [`pyproject.toml`](../pyproject.toml) under `[tool.coverage]`. It measures the `contacts` and `config` packages and omits migrations, test modules, and WSGI/ASGI entry points.
 
 ```powershell
 coverage run manage.py test
@@ -58,10 +58,10 @@ CI (`.github/workflows/ci.yml`) runs `coverage run manage.py test` and fails if 
 
 ## Pytest
 
-[`pytest`](https://docs.pytest.org/) with [`pytest-django`](https://pytest-django.readthedocs.io/) discovers all `test_*.py` modules. Configuration lives in [`pytest.ini`](../pytest.ini).
+[`pytest`](https://docs.pytest.org/) with [`pytest-django`](https://pytest-django.readthedocs.io/) discovers all `test_*.py` modules. Configuration lives in [`pyproject.toml`](../pyproject.toml) under `[tool.pytest.ini_options]`.
 
 ```powershell
-pip install -r requirements.txt
+pip install -e ".[dev]"
 pytest
 pytest contacts/tests/test_views_actions.py -k favorite
 ```

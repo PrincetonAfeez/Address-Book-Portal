@@ -1,11 +1,36 @@
+# Environment
 .env
 .venv/
+venv/
+
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Django
 db.sqlite3
 media/
 staticfiles/
 logs/*.log
 logs/*.err.log
 
-Address Book Portal.txt
+# Test & coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+coverage.xml
+
+# Tools
+.mypy_cache/
+.ruff_cache/
+
+# OS & editors
+.DS_Store
+Thumbs.db
+*.swp
