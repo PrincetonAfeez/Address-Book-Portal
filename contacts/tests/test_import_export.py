@@ -160,10 +160,11 @@ class ImportExportTests(TestCase):
         payload = contact_to_vcard(contact)
 
         self.assertIn("BEGIN:VCARD", payload)
+        self.assertIn("VERSION:3.0", payload)
         self.assertIn("FN:Ada Lovelace", payload)
         self.assertIn("N:Lovelace;Ada;;;", payload)
-        self.assertIn("EMAIL;TYPE=OTHER:ada@example.com", payload)
-        self.assertIn("TEL;TYPE=MOBILE:+14155552671", payload)
+        self.assertIn("EMAIL:ada@example.com", payload)
+        self.assertIn("TEL;TYPE=CELL:+14155552671", payload)
         self.assertIn("ORG:Analytical Engines", payload)
         self.assertIn("BDAY:1815-12-10", payload)
         self.assertIn("END:VCARD", payload)

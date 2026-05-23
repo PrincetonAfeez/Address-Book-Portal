@@ -5,7 +5,7 @@
   <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
     <div class="flex items-center gap-4">
       {% if contact.photo %}
-        <img class="h-20 w-20 rounded object-cover" src="{{ contact.photo.url }}" alt="">
+        <img class="h-20 w-20 rounded object-cover" src="{{ contact.photo_url }}" alt="">
       {% else %}
         <span class="grid h-20 w-20 place-items-center rounded bg-emerald-600 text-2xl font-bold text-white">{{ contact.initials }}</span>
       {% endif %}

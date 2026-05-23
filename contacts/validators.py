@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 
 FORMAT_CHARS = str.maketrans("", "", " -.()")
+HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
 def normalize_phone_number(value):
@@ -40,3 +41,8 @@ def normalize_phone_number(value):
 
 def validate_phone_number(value):
     normalize_phone_number(value)
+
+
+def validate_hex_color(value):
+    if not HEX_COLOR_RE.match(value or ""):
+        raise ValidationError("Use a hex color like #2563eb.")

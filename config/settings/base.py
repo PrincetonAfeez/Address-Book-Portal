@@ -40,7 +40,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -88,13 +87,12 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-SERVE_MEDIA = env_bool("DJANGO_SERVE_MEDIA", False)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -108,7 +106,28 @@ EMAIL_BACKEND = os.getenv(
 DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "noreply@example.com")
 
 LOG_DIR = BASE_DIR / "logs"
-LOG_DIR.mkdir(exist_ok=True)
+
+LOG_HANDLERS = ["console"]
+LOGGING_HANDLERS = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "standard",
+    },
+}
+
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except OSError:
+    pass
+else:
+    LOG_HANDLERS.append("file")
+    LOGGING_HANDLERS["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": LOG_DIR / "address_book.log",
+        "maxBytes": 1024 * 1024,
+        "backupCount": 3,
+        "formatter": "standard",
+    }
 
 LOGGING = {
     "version": 1,
@@ -118,21 +137,9 @@ LOGGING = {
             "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
         }
     },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "standard",
-        },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOG_DIR / "address_book.log",
-            "maxBytes": 1024 * 1024,
-            "backupCount": 3,
-            "formatter": "standard",
-        },
-    },
+    "handlers": LOGGING_HANDLERS,
     "root": {
-        "handlers": ["console", "file"],
+        "handlers": LOG_HANDLERS,
         "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
     },
 }

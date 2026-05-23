@@ -1,12 +1,15 @@
-from datetime import date, timedelta
+from datetime import timedelta
+import mimetypes
 
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import Http404, HttpResponse, StreamingHttpResponse
+from django.db import IntegrityError
+from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .exporters import contact_to_vcard, csv_contact_rows, vcards_for_contacts
@@ -26,6 +29,8 @@ SORTS = {
 
 
 def signup(request):
+    if request.user.is_authenticated:
+        return redirect("contacts:dashboard")
     if request.method == "POST":
         form = SignupForm(request.POST)
         if form.is_valid():
@@ -81,7 +86,7 @@ def selected_contacts_for_mode(user, selected, list_mode):
     if list_mode == "archive":
         return qs.archived()
     if list_mode == "favorites":
-        return qs.active().favorites()
+        return qs.favorites()
     return qs.active()
 
 
@@ -102,10 +107,10 @@ def base_contact_queryset(request, mode="active"):
     )
     if mode == "archive":
         qs = qs.archived()
+    elif mode == "favorites":
+        qs = qs.favorites()
     else:
         qs = qs.active()
-    if mode == "favorites":
-        qs = qs.favorites()
 
     query = request.GET.get("q", "").strip()
     group_id = request.GET.get("group")
@@ -171,13 +176,14 @@ def contact_form_context(form, contact, list_mode=""):
 @login_required
 def dashboard(request):
     contacts = Contact.objects.for_user(request.user).active()
-    today = date.today()
+    today = timezone.localdate()
 
     context = {
         "total_contacts": contacts.count(),
         "total_groups": Group.objects.for_user(request.user).count(),
         "total_tags": Tag.objects.for_user(request.user).count(),
-        "recent_additions": contacts.filter(created_at__date__gte=today - timedelta(days=7))[:5],
+        "recent_additions": contacts.filter(created_at__date__gte=today - timedelta(days=7))
+        .order_by("-created_at")[:5],
         "upcoming_birthdays": upcoming_birthdays(contacts, today=today)[:8],
         "recently_updated": contacts.order_by("-updated_at")[:5],
     }
@@ -203,19 +209,26 @@ def organization(request):
         if group_form.is_valid():
             group = group_form.save(commit=False)
             group.owner = request.user
-            group.save()
-            messages.success(request, f"{group.name} group created.")
-            return redirect("contacts:organization")
+            try:
+                group.save()
+            except IntegrityError:
+                group_form.add_error("name", "You already have a group with this name.")
+            else:
+                messages.success(request, f"{group.name} group created.")
+                return redirect("contacts:organization")
 
     if request.method == "POST" and request.POST.get("kind") == "tag":
         tag_form = TagForm(request.POST, prefix="tag", user=request.user)
         if tag_form.is_valid():
             tag = tag_form.save(commit=False)
             tag.owner = request.user
-            tag.full_clean()
-            tag.save()
-            messages.success(request, f"{tag.name} tag created.")
-            return redirect("contacts:organization")
+            try:
+                tag.save()
+            except IntegrityError:
+                tag_form.add_error("name", "You already have a tag with this name.")
+            else:
+                messages.success(request, f"{tag.name} tag created.")
+                return redirect("contacts:organization")
 
     return render(
         request,
@@ -254,6 +267,16 @@ def contact_detail(request, pk):
 
 
 @login_required
+def contact_photo(request, pk):
+    contact = Contact.objects.get_for_user_or_404(request.user, pk=pk)
+    if not contact.photo:
+        raise Http404("Photo not found.")
+    content_type, _ = mimetypes.guess_type(contact.photo.name)
+    photo_file = contact.photo.open("rb")
+    return FileResponse(photo_file, content_type=content_type or "application/octet-stream")
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def contact_create(request):
     list_mode = request_list_mode(request)
@@ -262,13 +285,13 @@ def contact_create(request):
         contact = form.save(commit=False)
         contact.owner = request.user
         contact.full_clean()
-        contact.save()
+        contact.save(resize_photo=bool(form.cleaned_data.get("photo")))
         form.sync_primary_records(contact)
         messages.success(request, f"{contact.display_name} was added.")
         htmx_response = htmx_list_or_redirect(
             request,
             redirect_to=contact.get_absolute_url(),
-            refresh_modes={"archive"},
+            refresh_modes={"archive", "favorites"},
         )
         if htmx_response:
             return htmx_response
@@ -290,7 +313,6 @@ def contact_update(request, pk):
     form = ContactForm(request.POST or None, request.FILES or None, instance=contact)
     if request.method == "POST" and form.is_valid():
         contact = form.save()
-        form.sync_primary_records(contact)
         messages.success(request, f"{contact.display_name} was updated.")
         htmx_response = htmx_list_or_redirect(
             request,
@@ -377,18 +399,17 @@ def selection_toggle(request):
             current.discard(str(contact_id))
     set_selected_ids(request, current)
     current = prune_selected_ids(request)
-    list_mode = request_list_mode(request)
+    list_mode = request_list_mode(request, default="active")
     if is_htmx(request) and list_mode:
         return rows_response(request, mode=list_mode)
     return render(
         request,
-        "contacts/partials/_selection_bar.html",
+        "contacts/partials/_bulk_bar.html",
         {
             "selected_count": len(current),
-            "bulk_form": BulkActionForm(
-                user=request.user,
-                list_mode=request_list_mode(request, default="active"),
-            ),
+            "mode": list_mode,
+            "bulk_form": BulkActionForm(user=request.user, list_mode=list_mode),
+            "show_clear": False,
         },
     )
 
@@ -412,8 +433,14 @@ def selection_clear(request):
 def selection_page(request):
     current = selected_ids(request)
     page_ids = set(request.POST.getlist("contact_ids"))
+    owned_page_ids = {
+        str(pk)
+        for pk in Contact.objects.for_user(request.user)
+        .filter(pk__in=page_ids)
+        .values_list("pk", flat=True)
+    }
     if request.POST.get("selected") == "true":
-        current |= page_ids
+        current |= owned_page_ids
     else:
         current -= page_ids
     set_selected_ids(request, current)
@@ -432,28 +459,31 @@ def bulk_action(request):
         list_mode=list_mode,
     )
     current = selected_ids(request)
-    contacts = selected_contacts_for_mode(request.user, current, list_mode)
+    contacts = list(selected_contacts_for_mode(request.user, current, list_mode))
     if form.is_valid():
-        action = form.cleaned_data["action"]
-        if action == "archive":
-            for contact in contacts:
-                contact.soft_delete()
-            set_selected_ids(request, [])
-            messages.success(request, "Selected contacts moved to archive.")
-        elif action == "delete":
-            count = contacts.count()
-            contacts.delete()
-            set_selected_ids(request, [])
-            messages.success(request, f"{count} contacts permanently deleted.")
-        elif action == "add_group":
-            form.cleaned_data["group"].contacts.add(*contacts)
-            messages.success(request, "Contacts added to group.")
-        elif action == "add_tag":
-            form.cleaned_data["tag"].contacts.add(*contacts)
-            messages.success(request, "Tag applied to contacts.")
-        elif action == "remove_tag":
-            form.cleaned_data["tag"].contacts.remove(*contacts)
-            messages.success(request, "Tag removed from contacts.")
+        if not contacts:
+            messages.warning(request, "No selected contacts match this view.")
+        else:
+            action = form.cleaned_data["action"]
+            if action == "archive":
+                for contact in contacts:
+                    contact.soft_delete()
+                set_selected_ids(request, [])
+                messages.success(request, f"{len(contacts)} contacts moved to archive.")
+            elif action == "delete":
+                count = len(contacts)
+                Contact.objects.filter(pk__in=[contact.pk for contact in contacts]).delete()
+                set_selected_ids(request, [])
+                messages.success(request, f"{count} contacts permanently deleted.")
+            elif action == "add_group":
+                form.cleaned_data["group"].contacts.add(*contacts)
+                messages.success(request, f"{len(contacts)} contacts added to group.")
+            elif action == "add_tag":
+                form.cleaned_data["tag"].contacts.add(*contacts)
+                messages.success(request, f"Tag applied to {len(contacts)} contacts.")
+            elif action == "remove_tag":
+                form.cleaned_data["tag"].contacts.remove(*contacts)
+                messages.success(request, f"Tag removed from {len(contacts)} contacts.")
     else:
         messages.error(request, "Check the bulk action fields.")
     if is_htmx(request) and list_mode:
@@ -472,10 +502,13 @@ def csv_import(request):
     result = None
     if request.method == "POST" and form.is_valid():
         result = stream_import_contacts(request.user, form.cleaned_data["file"])
-        request.session["last_import_errors"] = [
-            {"row_number": err.row_number, "data": err.data, "errors": err.errors}
-            for err in result.errors
-        ]
+        if result.errors:
+            request.session["last_import_errors"] = [
+                {"row_number": err.row_number, "data": err.data, "errors": err.errors}
+                for err in result.errors
+            ]
+        else:
+            request.session.pop("last_import_errors", None)
         request.session.modified = True
         if result.imported_count:
             messages.success(request, f"{result.imported_count} contacts imported.")
@@ -497,6 +530,8 @@ def csv_error_report(request):
     ]
     response = StreamingHttpResponse(error_report_rows(errors), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="address-book-import-errors.csv"'
+    request.session.pop("last_import_errors", None)
+    request.session.modified = True
     return response
 
 

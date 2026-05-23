@@ -25,6 +25,3 @@ jobs:
         run: |
           coverage run manage.py test --verbosity=1
           coverage report --fail-under=85
-
-      - name: Run pytest
-        run: pytest -q

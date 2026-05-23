@@ -48,7 +48,7 @@ python manage.py createsuperuser
 python manage.py collectstatic
 ```
 
-**Test suite:** 162 tests (all passing). **Line coverage:** 96%+ on `contacts` + `config` — see [docs/TESTING.md](docs/TESTING.md).
+**Test suite:** 203 tests (all passing). **Line coverage:** 96%+ on `contacts` + `config` — see [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 
@@ -67,8 +67,7 @@ python manage.py collectstatic
 - `DJANGO_ALLOWED_HOSTS`: comma-separated hostnames.
 - `DJANGO_TIME_ZONE`: timezone name (default `America/Los_Angeles`).
 - `DATABASE_URL`: PostgreSQL URL for Railway or another host.
-- `DJANGO_CSRF_TRUSTED_ORIGINS`: comma-separated HTTPS origins.
-- `DJANGO_SERVE_MEDIA`: set `True` in production for small deployments (Railway ephemeral disk).
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: comma-separated HTTPS origins (**required in production**).
 - `DJANGO_EMAIL_BACKEND`: override mail backend (console in dev).
 - `DJANGO_DEFAULT_FROM_EMAIL`: from address for password reset mail.
 
@@ -80,7 +79,8 @@ Set `DJANGO_SETTINGS_MODULE=config.settings.prod` in production (already the def
 - `DATABASE_URL`
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_CSRF_TRUSTED_ORIGINS`
-- `DJANGO_SERVE_MEDIA=True` if you want uploaded photos served by Django
+
+Contact photos are served at `/contacts/<id>/photo/` behind login and ownership checks — not as public `/media/` files.
 
 For password reset email in production, configure your SMTP settings via Django's email environment variables or a provider backend.
 

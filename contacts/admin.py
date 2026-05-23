@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from .forms import ContactForm
 from .models import Contact, Email, Group, Phone, Tag
 
 
@@ -28,6 +29,10 @@ class ContactAdmin(admin.ModelAdmin):
     list_filter = ("is_favorite", "is_archived", "created_at", "updated_at")
     search_fields = ("first_name", "last_name", "email", "phone", "company")
     inlines = [PhoneInline, EmailInline]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        ContactForm(instance=obj).sync_primary_records(obj)
 
 
 @admin.register(Group)

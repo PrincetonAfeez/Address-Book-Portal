@@ -31,7 +31,9 @@ Maps spec items from `Address Book Portal.txt` to implementation and tests.
 | Error report download | `csv_error_report` | `test_csv_error_report_404_without_session`, `test_csv_error_report_download` |
 | Seed data | `contacts/fixtures/seed_data.json` | — |
 | Logging | `config/settings/base.py` `LOGGING` | — |
-| WhiteNoise static | `config/settings/base.py` | — |
+| WhiteNoise static | `config/settings/prod.py` | — |
+| Authenticated photo serving | `contact_photo`, `Contact.photo_url` | `test_contact_photo_*` |
+| Case-insensitive group/tag names | DB constraints + forms | `test_group_name_unique_case_insensitive`, `test_tag_name_unique_case_insensitive` |
 
 ## Coverage note
 

@@ -8,6 +8,7 @@ from django.test import SimpleTestCase, TestCase
 
 from contacts.importers import (
     ImportResult,
+    build_field_map,
     canonical_header,
     decoded_csv_lines,
     error_report_rows,
@@ -30,8 +31,14 @@ class ImporterUnitTests(SimpleTestCase):
         self.assertIsNone(parse_date(""))
 
     def test_parse_date_rejects_invalid(self):
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as ctx:
             parse_date("not-a-date")
+        self.assertIn("birthday", ctx.exception.message_dict)
+
+    def test_build_field_map_detects_duplicate_aliases(self):
+        with self.assertRaises(ValidationError) as ctx:
+            build_field_map(["Phone", "Mobile"])
+        self.assertIn("file", ctx.exception.message_dict)
 
     def test_import_result_failed_count(self):
         result = ImportResult(errors=[RowError(2, {}, {"first_name": "required"})])
@@ -57,6 +64,15 @@ class ImporterUnitTests(SimpleTestCase):
         lines = list(decoded_csv_lines(ChunkFile()))
         self.assertEqual("".join(lines), "First Name\nAda")
 
+    def test_decoded_csv_lines_preserves_crlf_split_across_chunks(self):
+        class ChunkFile:
+            def chunks(self):
+                yield b"First Name,Last Name\r"
+                yield b"\nAda,Lovelace\n"
+
+        lines = list(decoded_csv_lines(ChunkFile()))
+        self.assertEqual(lines, ["First Name,Last Name\r\n", "Ada,Lovelace\n"])
+
 
 class ImporterIntegrationTests(TestCase):
     def setUp(self):
@@ -76,3 +92,44 @@ class ImporterIntegrationTests(TestCase):
         )
         result = stream_import_contacts(self.user, uploaded)
         self.assertEqual(result.imported_count, 1)
+
+    def test_stream_import_reports_extra_columns_without_crashing(self):
+        uploaded = SimpleUploadedFile(
+            "contacts.csv",
+            b"First Name,Last Name\nAda,Lovelace,Surprise\n",
+            content_type="text/csv",
+        )
+        result = stream_import_contacts(self.user, uploaded)
+        self.assertEqual(result.imported_count, 0)
+        self.assertEqual(result.failed_count, 1)
+        self.assertIn("Too many columns", str(result.errors[0].errors))
+
+    def test_stream_import_rejects_non_utf8_encoding(self):
+        uploaded = SimpleUploadedFile(
+            "contacts.csv",
+            "First Name,Last Name\nJos\xe9,Gar\xe7a\n".encode("latin-1"),
+            content_type="text/csv",
+        )
+        result = stream_import_contacts(self.user, uploaded)
+        self.assertEqual(result.imported_count, 0)
+        self.assertIn("UTF-8", str(result.errors[0].errors))
+
+    def test_stream_import_rejects_duplicate_header_aliases(self):
+        uploaded = SimpleUploadedFile(
+            "contacts.csv",
+            b"Phone,Mobile\n555,666\n",
+            content_type="text/csv",
+        )
+        result = stream_import_contacts(self.user, uploaded)
+        self.assertEqual(result.imported_count, 0)
+        self.assertIn("Duplicate columns", str(result.errors[0].errors))
+
+    def test_stream_import_birthday_error_uses_birthday_field(self):
+        uploaded = SimpleUploadedFile(
+            "contacts.csv",
+            b"First Name,Last Name,Birthday\nAda,Lovelace,not-a-date\n",
+            content_type="text/csv",
+        )
+        result = stream_import_contacts(self.user, uploaded)
+        self.assertEqual(result.failed_count, 1)
+        self.assertIn("birthday", result.errors[0].errors)

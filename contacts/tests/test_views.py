@@ -37,6 +37,22 @@ class ContactViewTests(TestCase):
         self.assertContains(response, "Ada")
         self.assertNotContains(response, "<table")
 
+    def test_htmx_search_updates_pagination_and_select_all_oob(self):
+        for index in range(30):
+            Contact.objects.create(owner=self.user, first_name=f"Person{index}", company="Acme")
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("contacts:list"),
+            {"q": "Person2"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertContains(response, 'id="contact-list-pagination"')
+        self.assertContains(response, 'id="select-all-form"')
+        self.assertContains(response, "hx-swap-oob")
+        self.assertContains(response, "q=Person2")
+
     def test_create_contact_via_htmx_on_list(self):
         self.client.force_login(self.user)
 
@@ -97,7 +113,7 @@ class ContactViewTests(TestCase):
         self.assertContains(response, "1 selected")
         self.assertEqual(self.client.session["selected_contact_ids"], [str(contact.pk)])
 
-    def test_create_contact_via_htmx_from_favorites_refreshes_list(self):
+    def test_create_contact_via_htmx_from_favorites_redirects_to_detail(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -112,8 +128,27 @@ class ContactViewTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Ada Lovelace")
+        contact = Contact.objects.get(first_name="Ada")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], contact.get_absolute_url())
+
+    def test_create_non_favorite_via_htmx_from_favorites_redirects_to_detail(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("contacts:create"),
+            {
+                "first_name": "Bob",
+                "last_name": "Plain",
+                "phone": "(415) 555-2671",
+                "list_mode": "favorites",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        contact = Contact.objects.get(first_name="Bob")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], contact.get_absolute_url())
 
     def test_modal_create_form_posts_to_create_url(self):
         self.client.force_login(self.user)

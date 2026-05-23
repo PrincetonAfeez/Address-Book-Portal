@@ -56,8 +56,18 @@
     });
     document.body.addEventListener("htmx:afterSettle", () => {
       if (window.lucide) window.lucide.createIcons();
+      scheduleToastDismiss();
     });
     if (window.lucide) window.lucide.createIcons();
+
+    function scheduleToastDismiss() {
+      document.querySelectorAll("#toast-stack .toast").forEach((toast) => {
+        if (toast.dataset.dismissScheduled) return;
+        toast.dataset.dismissScheduled = "true";
+        window.setTimeout(() => toast.remove(), 5000);
+      });
+    }
+    scheduleToastDismiss();
   </script>
 </body>
 </html>

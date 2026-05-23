@@ -3,7 +3,7 @@
     <input type="checkbox"
            aria-label="Select {{ contact.display_name }}"
            {% if contact.id|stringformat:'s' in selected_ids %}checked{% endif %}
-           hx-post="{% url 'contacts:selection_toggle' %}"
+           hx-post="{% url 'contacts:selection_toggle' %}?{{ request.GET.urlencode }}"
            hx-target="#contact-table-body"
            hx-swap="innerHTML"
            hx-indicator="#table-indicator"
@@ -12,7 +12,7 @@
   <td class="px-3 py-3">
     <a class="flex min-w-0 items-center gap-3" href="{{ contact.get_absolute_url }}">
       {% if contact.photo %}
-        <img class="avatar" src="{{ contact.photo.url }}" alt="">
+        <img class="avatar" src="{{ contact.photo_url }}" alt="">
       {% else %}
         <span class="avatar">{{ contact.initials }}</span>
       {% endif %}

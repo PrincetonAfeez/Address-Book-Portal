@@ -1,9 +1,23 @@
+"""CSV and vCard export helpers.
+
+CSV export/import covers primary scalar contact fields only — not groups, tags,
+or secondary phone/email rows. See docs/REPORT.md.
+"""
+
 import csv
 
+from .csv_utils import CsvEcho
+from .models import Email, Phone
 
-class Echo:
-    def write(self, value):
-        return value
+
+Echo = CsvEcho
+
+
+PHONE_VCARD_TYPES = {
+    Phone.MOBILE: "CELL",
+    Phone.WORK: "WORK",
+    Phone.HOME: "HOME",
+}
 
 
 def csv_contact_rows(queryset):
@@ -40,24 +54,53 @@ def csv_contact_rows(queryset):
 
 
 def escape_vcard(value):
+    text = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
     return (
-        str(value or "")
-        .replace("\\", "\\\\")
+        text.replace("\\", "\\\\")
         .replace("\n", "\\n")
         .replace(";", "\\;")
         .replace(",", "\\,")
     )
 
 
+def _utf8_chunk(data):
+    while data:
+        try:
+            data.decode("utf-8")
+            return data
+        except UnicodeDecodeError:
+            data = data[:-1]
+    return b""
+
+
 def fold_line(line, limit=75):
-    if len(line) <= limit:
+    encoded = line.encode("utf-8")
+    if len(encoded) <= limit:
         return line
-    parts = [line[:limit]]
-    rest = line[limit:]
-    while rest:
-        parts.append(" " + rest[: limit - 1])
-        rest = rest[limit - 1 :]
+    parts = []
+    pos = 0
+    first = True
+    while pos < len(encoded):
+        max_len = limit if first else limit - 1
+        chunk = _utf8_chunk(encoded[pos : pos + max_len])
+        if not chunk:
+            break
+        segment = chunk.decode("utf-8")
+        parts.append(segment if first else " " + segment)
+        pos += len(chunk)
+        first = False
     return "\r\n".join(parts)
+
+
+def format_vcard_phone(number, label):
+    vtype = PHONE_VCARD_TYPES.get(label, label.upper())
+    return f"TEL;TYPE={vtype}:{escape_vcard(number)}"
+
+
+def format_vcard_email(address, label):
+    if label == Email.OTHER:
+        return f"EMAIL:{escape_vcard(address)}"
+    return f"EMAIL;TYPE={label.upper()}:{escape_vcard(address)}"
 
 
 def contact_to_vcard(contact):
@@ -72,13 +115,13 @@ def contact_to_vcard(contact):
     if contact.job_title:
         lines.append(f"TITLE:{escape_vcard(contact.job_title)}")
     for email in contact.emails.all():
-        lines.append(f"EMAIL;TYPE={email.label.upper()}:{escape_vcard(email.address)}")
+        lines.append(format_vcard_email(email.address, email.label))
     if contact.email and not contact.emails.exists():
-        lines.append(f"EMAIL;TYPE=OTHER:{escape_vcard(contact.email)}")
+        lines.append(format_vcard_email(contact.email, Email.OTHER))
     for phone in contact.phones.all():
-        lines.append(f"TEL;TYPE={phone.label.upper()}:{escape_vcard(phone.number)}")
+        lines.append(format_vcard_phone(phone.number, phone.label))
     if contact.phone and not contact.phones.exists():
-        lines.append(f"TEL;TYPE=MOBILE:{escape_vcard(contact.phone)}")
+        lines.append(format_vcard_phone(contact.phone, Phone.MOBILE))
     if contact.birthday:
         lines.append(f"BDAY:{contact.birthday.isoformat()}")
     if contact.notes:

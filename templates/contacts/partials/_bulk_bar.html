@@ -3,7 +3,8 @@
       hx-post="{% url 'contacts:bulk_action' %}?{{ request.GET.urlencode }}"
       hx-target="#contact-table-body"
       hx-swap="innerHTML"
-      hx-indicator="#table-indicator">
+      hx-indicator="#table-indicator"
+      {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
   <input type="hidden" name="list_mode" value="{{ mode }}">
   <span id="selected-count" class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
   {{ bulk_form.action }}
@@ -12,6 +13,7 @@
   <button class="icon-button" type="submit" title="Apply bulk action" aria-label="Apply bulk action">
     <i data-lucide="play"></i>
   </button>
+  {% if show_clear|default:True %}
   <button class="icon-button" type="button" title="Clear selection" aria-label="Clear selection"
           hx-post="{% url 'contacts:selection_clear' %}?{{ request.GET.urlencode }}"
           hx-target="#contact-table-body"
@@ -20,7 +22,8 @@
           hx-vals='{"list_mode": "{{ mode }}"}'>
     <i data-lucide="x"></i>
   </button>
+  {% endif %}
 </form>
 {% else %}
-<div id="bulk-bar"></div>
+<div id="bulk-bar"{% if oob %} hx-swap-oob="outerHTML"{% endif %}></div>
 {% endif %}

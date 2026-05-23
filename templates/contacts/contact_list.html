@@ -12,16 +12,22 @@
         {% if paginator.count %}
           Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} contacts
         {% else %}
-          No contacts yet — add your first one
+          {% if mode == "archive" %}
+            No archived contacts
+          {% elif mode == "favorites" %}
+            No favorite contacts yet
+          {% else %}
+            No contacts yet — add your first one
+          {% endif %}
         {% endif %}
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <a class="button-secondary" href="{% url 'contacts:csv_export' %}?mode={{ mode }}&{{ request.GET.urlencode }}">
+      <a class="button-secondary" href="{% url 'contacts:csv_export' %}?{% qs_replace mode=mode %}">
         <i data-lucide="file-down"></i>
         CSV
       </a>
-      <a class="button-secondary" href="{% url 'contacts:vcard_bulk' %}?mode={{ mode }}&{{ request.GET.urlencode }}">
+      <a class="button-secondary" href="{% url 'contacts:vcard_bulk' %}?{% qs_replace mode=mode %}">
         <i data-lucide="contact"></i>
         vCard
       </a>
@@ -62,20 +68,7 @@
           <thead class="bg-slate-100 text-left text-xs font-semibold uppercase text-slate-600">
             <tr>
               <th class="w-10 px-3 py-3">
-                <form hx-post="{% url 'contacts:selection_page' %}?{{ request.GET.urlencode }}"
-                      hx-target="#contact-table-body"
-                      hx-swap="innerHTML"
-                      hx-indicator="#table-indicator">
-                  {% for contact in contacts %}
-                    <input type="hidden" name="contact_ids" value="{{ contact.id }}">
-                  {% endfor %}
-                  <input type="hidden" name="list_mode" value="{{ mode }}">
-                  <input type="hidden" name="selected" value="{% if page_all_selected %}false{% else %}true{% endif %}">
-                  <input type="checkbox"
-                         aria-label="Select all on page"
-                         {% if page_all_selected %}checked{% endif %}
-                         onchange="this.form.requestSubmit()">
-                </form>
+                {% include "contacts/partials/_select_all_form.html" %}
               </th>
               <th class="px-3 py-3"><a href="{% sort_link 'name' 'asc' %}">Name {% sort_indicator 'name' %}</a></th>
               <th class="px-3 py-3"><a href="{% sort_link 'company' 'asc' %}">Company {% sort_indicator 'company' %}</a></th>
@@ -92,17 +85,7 @@
         </table>
       </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-        <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
-        <div class="flex gap-2">
-          {% if page_obj.has_previous %}
-            <a class="button-secondary" href="?{% qs_replace page=page_obj.previous_page_number %}">Previous</a>
-          {% endif %}
-          {% if page_obj.has_next %}
-            <a class="button-secondary" href="?{% qs_replace page=page_obj.next_page_number %}">Next</a>
-          {% endif %}
-        </div>
-      </div>
+      {% include "contacts/partials/_contact_pagination.html" %}
     </section>
   </div>
 </div>

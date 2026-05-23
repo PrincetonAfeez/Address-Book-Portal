@@ -39,7 +39,8 @@ See [ADR 0001](adr/0001-htmx-over-spa.md), [ADR 0002](adr/0002-hand-rolled-phone
 | Area | Approach |
 |------|----------|
 | Phone validation | Hand-rolled E.164 / US 10-digit normalizer |
-| vCard | RFC 6350 subset with escaping and line folding |
+| vCard | RFC 2426 (vCard 3.0) subset with escaping and UTF-8 octet folding |
+| CSV import/export | Primary scalar fields only (no groups, tags, or secondary phones/emails) |
 | Bulk selection | Server-side session set, pruned on load |
 | Birthdays | Leap-day safe date math in `contacts/utils.py` |
 | Static files | WhiteNoise in production |
@@ -47,11 +48,12 @@ See [ADR 0001](adr/0001-htmx-over-spa.md), [ADR 0002](adr/0002-hand-rolled-phone
 ## Limitations
 
 1. **Primary-field UI** — Only one phone and email are editable in forms; related models exist for export and future use (ADR 0004).
-2. **Favorites vs archive** — Favorited contacts that are archived do not appear in the Favorites view because it lists active contacts only.
+2. **Favorites vs archive** — Favorited contacts remain visible in the Favorites view even when archived; the main contact list still hides archived rows.
 3. **Media on Railway** — Uploaded photos use local disk; redeploys on ephemeral hosting can lose files unless external storage is added.
 4. **Email in production** — Password reset uses the console backend in development; production needs SMTP configuration.
 5. **CDN frontend** — Tailwind and HTMX load from CDNs for simplicity, not offline/air-gapped use.
 6. **No shared address books** — Single-tenant per-user ownership by design (ADR 0003).
+7. **CSV round-trip** — Export/import covers primary scalar fields only; groups, tags, and extra phone/email rows are not preserved in CSV.
 
 ## Future Work
 

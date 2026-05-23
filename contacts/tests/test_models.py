@@ -48,3 +48,10 @@ class ContactModelTests(TestCase):
         contact.save()
 
         self.assertEqual(contact.phone, "+14155552671")
+
+    def test_group_name_unique_case_insensitive(self):
+        from django.db import IntegrityError
+
+        Group.objects.create(owner=self.user, name="Friends")
+        with self.assertRaises(IntegrityError):
+            Group.objects.create(owner=self.user, name="friends")

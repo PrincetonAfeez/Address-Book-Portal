@@ -1,0 +1,13 @@
+{% load querystring %}
+<div id="contact-list-pagination" class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600"
+     {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
+  <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+  <div class="flex gap-2">
+    {% if page_obj.has_previous %}
+      <a class="button-secondary" href="?{% qs_replace page=page_obj.previous_page_number %}">Previous</a>
+    {% endif %}
+    {% if page_obj.has_next %}
+      <a class="button-secondary" href="?{% qs_replace page=page_obj.next_page_number %}">Next</a>
+    {% endif %}
+  </div>
+</div>

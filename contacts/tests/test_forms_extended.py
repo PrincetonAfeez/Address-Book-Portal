@@ -21,6 +21,19 @@ class FormsExtendedTests(TestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_signup_form_rejects_duplicate_email_case_insensitive(self):
+        User.objects.create_user("existing", email="Ada@Example.com", password="pass")
+        form = SignupForm(
+            data={
+                "username": "newuser",
+                "email": "ada@example.com",
+                "password1": "complex-pass-123",
+                "password2": "complex-pass-123",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors)
+
     def test_group_form_rejects_empty_name(self):
         form = GroupForm(data={"name": "   "}, user=self.user, prefix="group")
         self.assertFalse(form.is_valid())
@@ -34,6 +47,15 @@ class FormsExtendedTests(TestCase):
     def test_tag_form_rejects_invalid_color(self):
         form = TagForm(
             data={"name": "VIP", "color": "red"},
+            user=self.user,
+            prefix="tag",
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("color", form.errors)
+
+    def test_tag_form_rejects_non_hex_digits(self):
+        form = TagForm(
+            data={"name": "VIP", "color": "#zzzzzz"},
             user=self.user,
             prefix="tag",
         )

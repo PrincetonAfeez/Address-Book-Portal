@@ -34,7 +34,13 @@
               {% for error in result.errors %}
                 <tr>
                   <td class="px-3 py-2">{{ error.row_number }}</td>
-                  <td class="px-3 py-2">{{ error.errors }}</td>
+                  <td class="px-3 py-2">
+                    {% for field, msgs in error.errors.items %}
+                      {% for msg in msgs %}
+                        <div><strong>{{ field }}:</strong> {{ msg }}</div>
+                      {% endfor %}
+                    {% endfor %}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>

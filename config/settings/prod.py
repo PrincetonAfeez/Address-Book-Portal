@@ -1,7 +1,8 @@
 import os
-from urllib.parse import urlparse
 
 from django.core.exceptions import ImproperlyConfigured
+
+from config.database import postgres_from_url
 
 from .base import *  # noqa: F403
 
@@ -10,19 +11,25 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ImproperlyConfigured("Set the DJANGO_SECRET_KEY environment variable.")
 
-SERVE_MEDIA = env_bool("DJANGO_SERVE_MEDIA", True)  # noqa: F405
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("Set the DJANGO_ALLOWED_HOSTS environment variable.")
 
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+] + MIDDLEWARE[1:]  # noqa: F405
 
-def postgres_from_url(database_url):
-    parsed = urlparse(database_url)
-    return {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": parsed.path.lstrip("/"),
-        "USER": parsed.username,
-        "PASSWORD": parsed.password,
-        "HOST": parsed.hostname,
-        "PORT": parsed.port or "",
-    }
+STORAGES = {
+    **STORAGES,  # noqa: F405
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 if os.getenv("DATABASE_URL"):
@@ -44,6 +51,8 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+if not CSRF_TRUSTED_ORIGINS:
+    raise ImproperlyConfigured("Set the DJANGO_CSRF_TRUSTED_ORIGINS environment variable.")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)  # noqa: F405

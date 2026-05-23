@@ -11,6 +11,7 @@ urlpatterns = [
     path("contacts/archive/", views.contact_list, {"mode": "archive"}, name="archive"),
     path("contacts/new/", views.contact_create, name="create"),
     path("contacts/<int:pk>/", views.contact_detail, name="detail"),
+    path("contacts/<int:pk>/photo/", views.contact_photo, name="photo"),
     path("contacts/<int:pk>/edit/", views.contact_update, name="edit"),
     path("contacts/<int:pk>/delete/", views.contact_delete, name="delete"),
     path("contacts/<int:pk>/restore/", views.contact_restore, name="restore"),

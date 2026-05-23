@@ -1,14 +1,18 @@
+import logging
 from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
+from django.db.models.functions import Lower
 from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
 
-from .validators import normalize_phone_number, validate_phone_number
+from .validators import normalize_phone_number, validate_hex_color, validate_phone_number
+
+logger = logging.getLogger(__name__)
 
 
 def contact_photo_path(instance, filename):
@@ -38,6 +42,7 @@ class OwnedQuerySet(models.QuerySet):
             models.Q(first_name__icontains=query)
             | models.Q(last_name__icontains=query)
             | models.Q(email__icontains=query)
+            | models.Q(phone__icontains=query)
             | models.Q(company__icontains=query)
             | models.Q(phones__number__icontains=query)
             | models.Q(emails__address__icontains=query)
@@ -96,19 +101,23 @@ class Contact(models.Model):
     def get_absolute_url(self):
         return reverse("contacts:detail", kwargs={"pk": self.pk})
 
+    @property
+    def photo_url(self):
+        if not self.photo:
+            return ""
+        return reverse("contacts:photo", kwargs={"pk": self.pk})
+
     def clean(self):
         if self.phone:
             self.phone = normalize_phone_number(self.phone)
 
     def save(self, *args, **kwargs):
+        resize_photo = kwargs.pop("resize_photo", False)
         update_fields = kwargs.get("update_fields")
         if self.phone and (update_fields is None or "phone" in update_fields):
-            try:
-                self.phone = normalize_phone_number(self.phone)
-            except ValidationError:
-                pass
+            self.phone = normalize_phone_number(self.phone)
         super().save(*args, **kwargs)
-        if self.photo and (update_fields is None or "photo" in update_fields):
+        if self.photo and resize_photo:
             self._resize_photo()
 
     def _resize_photo(self):
@@ -120,7 +129,8 @@ class Contact(models.Model):
             with Image.open(self.photo.path) as image:
                 image.thumbnail((800, 800))
                 image.save(self.photo.path)
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            logger.warning("Photo resize failed for contact %s: %s", self.pk, exc)
             return
 
     def soft_delete(self):
@@ -192,7 +202,7 @@ class Group(models.Model):
     class Meta:
         ordering = ["name"]
         constraints = [
-            models.UniqueConstraint(fields=["owner", "name"], name="unique_group_per_owner")
+            models.UniqueConstraint(Lower("name"), "owner", name="unique_group_per_owner_ci")
         ]
 
     def __str__(self):
@@ -211,12 +221,15 @@ class Tag(models.Model):
     class Meta:
         ordering = ["name"]
         constraints = [
-            models.UniqueConstraint(fields=["owner", "name"], name="unique_tag_per_owner")
+            models.UniqueConstraint(Lower("name"), "owner", name="unique_tag_per_owner_ci")
         ]
 
     def __str__(self):
         return self.name
 
     def clean(self):
-        if not self.color.startswith("#") or len(self.color) != 7:
-            raise ValidationError({"color": "Use a hex color like #2563eb."})
+        validate_hex_color(self.color)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

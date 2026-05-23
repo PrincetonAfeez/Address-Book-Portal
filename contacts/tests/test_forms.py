@@ -1,4 +1,5 @@
 from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -26,7 +27,7 @@ class ContactFormTests(TestCase):
             phone="+14155552671",
         )
         contact.photo = self._make_image()
-        contact.save()
+        contact.save(resize_photo=True)
 
         form = ContactForm(
             data={
@@ -64,3 +65,29 @@ class ContactFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("first_name", form.errors)
+
+    def test_contact_form_edit_without_photo_change_skips_resize(self):
+        contact = Contact.objects.create(
+            owner=self.user,
+            first_name="Ada",
+            phone="+14155552671",
+        )
+        contact.photo = self._make_image()
+        contact.save(resize_photo=True)
+        form = ContactForm(
+            data={
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "",
+                "phone": "+14155552671",
+                "company": "",
+                "job_title": "",
+                "birthday": "",
+                "notes": "",
+            },
+            instance=contact,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        with patch.object(Contact, "_resize_photo") as mock_resize:
+            form.save()
+            mock_resize.assert_not_called()

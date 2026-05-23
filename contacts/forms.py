@@ -1,9 +1,12 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 from .models import Contact, Email, Group, Phone, Tag
-from .validators import normalize_phone_number
+from .validators import normalize_phone_number, validate_hex_color
+
+User = get_user_model()
 
 
 class SignupForm(UserCreationForm):
@@ -12,6 +15,19 @@ class SignupForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ("username", "email")
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        if commit:
+            user.save()
+        return user
 
 
 class ContactForm(forms.ModelForm):
@@ -43,6 +59,14 @@ class ContactForm(forms.ModelForm):
     def clean_phone(self):
         phone = self.cleaned_data.get("phone")
         return normalize_phone_number(phone) if phone else ""
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        resize_photo = "photo" in self.changed_data or not instance.pk
+        if commit:
+            instance.save(resize_photo=resize_photo and bool(instance.photo))
+            self.sync_primary_records(instance)
+        return instance
 
     def sync_primary_records(self, contact):
         contact.phones.filter(label=Phone.MOBILE).delete()
@@ -101,8 +125,11 @@ class TagForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         color = cleaned.get("color", "")
-        if color and (not color.startswith("#") or len(color) != 7):
-            self.add_error("color", "Use a hex color like #2563eb.")
+        if color:
+            try:
+                validate_hex_color(color)
+            except ValidationError as exc:
+                self.add_error("color", exc.messages[0])
         return cleaned
 
 

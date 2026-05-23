@@ -333,6 +333,15 @@ class ContactActionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "rows failed")
 
+    def test_csv_import_view_handles_non_utf8_without_500(self):
+        csv_body = "First Name,Last Name\nJos\xe9,Gar\xe7a\n".encode("latin-1")
+        response = self.client.post(
+            reverse("contacts:csv_import"),
+            {"file": SimpleUploadedFile("contacts.csv", csv_body, content_type="text/csv")},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "rows failed")
+
     def test_vcard_bulk_export(self):
         Contact.objects.create(owner=self.user, first_name="Ada", last_name="Lovelace")
         response = self.client.get(reverse("contacts:vcard_bulk"))

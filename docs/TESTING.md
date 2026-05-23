@@ -7,7 +7,7 @@ python manage.py test
 pytest
 ```
 
-As of the latest run: **162 tests**, all passing (Django test runner and pytest).
+As of the latest run: **203 tests**, all passing (Django test runner and pytest).
 
 ## Coverage
 
@@ -69,7 +69,7 @@ pytest contacts/tests/test_views_actions.py -k favorite
 ## Intentionally light coverage
 
 - **Production settings** — `config.settings.prod` is validated by deployment configuration, not unit tests.
-- **Media URL in debug** — `config.urls` media helper only runs when `DEBUG=True`.
+- **Media URLs** — photos use `/contacts/<id>/photo/` with ownership checks, not public `/media/` paths.
 
 ## Traceability
 

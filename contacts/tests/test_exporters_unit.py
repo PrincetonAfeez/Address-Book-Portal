@@ -2,21 +2,33 @@ from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 
 from contacts.exporters import Echo, escape_vcard, fold_line, vcards_for_contacts
-from contacts.models import Contact
+from contacts.models import Contact, Email, Phone
 
 
 class ExporterUnitTests(SimpleTestCase):
     def test_echo_returns_value(self):
+        from contacts.csv_utils import CsvEcho
+
+        self.assertEqual(CsvEcho().write("chunk"), "chunk")
         self.assertEqual(Echo().write("chunk"), "chunk")
 
     def test_escape_vcard_escapes_special_chars(self):
         self.assertEqual(escape_vcard("a;b,c\\n"), "a\\;b\\,c\\\\n")
 
+    def test_escape_vcard_normalizes_carriage_returns(self):
+        self.assertEqual(escape_vcard("line one\r\nline two\rold mac"), "line one\\nline two\\nold mac")
+
     def test_fold_line_splits_long_lines(self):
         line = "x" * 100
         folded = fold_line(line)
         self.assertIn("\r\n ", folded)
-        self.assertLessEqual(len(folded.split("\r\n")[0]), 75)
+        self.assertLessEqual(len(folded.split("\r\n")[0].encode("utf-8")), 75)
+
+    def test_fold_line_respects_utf8_octet_limit(self):
+        line = "NOTE:" + ("é" * 40)
+        folded = fold_line(line)
+        for segment in folded.split("\r\n"):
+            self.assertLessEqual(len(segment.encode("utf-8")), 75)
 
     def test_fold_line_short_unchanged(self):
         self.assertEqual(fold_line("short"), "short")
@@ -42,8 +54,23 @@ class VcardBulkExportTests(TestCase):
             email="ada@example.com",
         )
         payload = contact_to_vcard(contact)
-        self.assertIn("TEL;TYPE=MOBILE:+14155552671", payload)
-        self.assertIn("EMAIL;TYPE=OTHER:ada@example.com", payload)
+        self.assertIn("TEL;TYPE=CELL:+14155552671", payload)
+        self.assertIn("EMAIL:ada@example.com", payload)
+
+    def test_vcard_maps_phone_and_email_types(self):
+        from contacts.exporters import contact_to_vcard
+
+        contact = Contact.objects.create(owner=self.user, first_name="Ada")
+        Phone.objects.create(contact=contact, number="+14155552671", label=Phone.WORK)
+        Email.objects.create(contact=contact, address="work@example.com", label=Email.WORK)
+        Email.objects.create(contact=contact, address="other@example.com", label=Email.OTHER)
+
+        payload = contact_to_vcard(contact)
+
+        self.assertIn("TEL;TYPE=WORK:+14155552671", payload)
+        self.assertIn("EMAIL;TYPE=WORK:work@example.com", payload)
+        self.assertIn("EMAIL:other@example.com", payload)
+        self.assertNotIn("TYPE=OTHER", payload)
 
     def test_vcard_includes_job_title(self):
         from contacts.exporters import contact_to_vcard

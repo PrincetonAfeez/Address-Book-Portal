@@ -7,20 +7,27 @@
       No contacts yet — add your first one
     {% endif %}
   </p>
-  <div id="bulk-bar" hx-swap-oob="outerHTML">
-    {% include "contacts/partials/_bulk_bar.html" %}
-  </div>
+  {% include "contacts/partials/_bulk_bar.html" with oob=True %}
+  {% include "contacts/partials/_select_all_form.html" with oob=True %}
+  {% include "contacts/partials/_contact_pagination.html" with oob=True %}
   <div id="toast-stack" hx-swap-oob="beforeend">
     {% include "partials/messages.html" %}
   </div>
-  <div id="modal-root" hx-swap-oob="innerHTML"></div>
 {% endif %}
 {% for contact in contacts %}
   {% include "contacts/partials/_contact_row.html" with contact=contact %}
 {% empty %}
   <tr>
     <td colspan="8" class="px-6 py-12 text-center">
-      <p class="empty-state">No contacts yet — add your first one</p>
+      <p class="empty-state">
+        {% if mode == "archive" %}
+          No archived contacts
+        {% elif mode == "favorites" %}
+          No favorite contacts yet
+        {% else %}
+          No contacts yet — add your first one
+        {% endif %}
+      </p>
     </td>
   </tr>
 {% endfor %}

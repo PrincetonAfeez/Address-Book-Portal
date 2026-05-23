@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import django; print\\('django', django.VERSION\\)\")",
+      "Bash(python -m pytest -q)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py makemigrations --check --dry-run)",
+      "Bash(DJANGO_SECRET_KEY=test-key-for-check python manage.py check --deploy --settings=config.settings.prod)",
+      "Bash(python -m coverage run manage.py test --verbosity=1)",
+      "Bash(python -m coverage report)",
+      "Bash(python -)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Python\\\\Address Book Portal\" diff --stat HEAD)"
+    ]
+  }
+}

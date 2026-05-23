@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from contacts.models import Contact, Group, Tag
 
@@ -37,3 +38,17 @@ class DashboardViewTests(TestCase):
 
         self.assertContains(response, "Upcoming birthdays")
         self.assertContains(response, "Ada")
+
+    def test_dashboard_recent_additions_ordered_by_created_at(self):
+        now = timezone.now()
+        older = Contact.objects.create(owner=self.user, first_name="Aaron", last_name="Alpha")
+        newer = Contact.objects.create(owner=self.user, first_name="Zed", last_name="Zulu")
+        Contact.objects.filter(pk=older.pk).update(created_at=now - timedelta(days=2))
+        Contact.objects.filter(pk=newer.pk).update(created_at=now - timedelta(days=1))
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("contacts:dashboard"))
+
+        recent = list(response.context["recent_additions"])
+        self.assertEqual(recent[0], newer)
+        self.assertEqual(recent[1], older)
