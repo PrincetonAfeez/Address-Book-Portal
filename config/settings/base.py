@@ -20,7 +20,7 @@ def env_bool(name, default=False):
     return value.lower() in {"1", "true", "yes", "on"}
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-address-book-secret")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-address-book-secret")  # prod requires DJANGO_SECRET_KEY
 DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     host.strip()

@@ -33,7 +33,7 @@ Production-only install (no test tools):
 pip install -r requirements.txt
 ```
 
-The seed user is `demo` with password `demo-password`.
+The seed user is `demo` with password `demo-password` (local development only — change or remove before any public deployment).
 
 `manage.py` defaults to `config.settings.dev`. Signup is at `/accounts/signup/`.
 
@@ -48,7 +48,7 @@ python manage.py createsuperuser
 python manage.py collectstatic
 ```
 
-**Test suite:** 203 tests (all passing). **Line coverage:** 96%+ on `contacts` + `config` — see [docs/TESTING.md](docs/TESTING.md).
+**Test suite:** 319 tests (all passing). **Line coverage:** 97%+ on `contacts` + `config` — see [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

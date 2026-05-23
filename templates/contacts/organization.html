@@ -24,7 +24,8 @@
         {% for group in groups %}
           <div class="flex items-center justify-between gap-3 py-2">
             <span class="font-medium text-slate-800">{{ group.name }}</span>
-            <form method="post" action="{% url 'contacts:group_delete' group.pk %}">
+            <form method="post" action="{% url 'contacts:group_delete' group.pk %}"
+                  onsubmit="return confirm('Delete group “{{ group.name|escapejs }}”? Contacts are not deleted.');">
               {% csrf_token %}
               <button class="icon-button small danger" type="submit" title="Delete group" aria-label="Delete group">
                 <i data-lucide="trash-2"></i>
@@ -54,7 +55,8 @@
         {% for tag in tags %}
           <div class="flex items-center justify-between gap-3 py-2">
             <span class="chip"><span class="h-2 w-2 rounded-full" style="background: {{ tag.color }}"></span>{{ tag.name }}</span>
-            <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}">
+            <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}"
+                  onsubmit="return confirm('Delete tag “{{ tag.name|escapejs }}”? Contacts are not deleted.');">
               {% csrf_token %}
               <button class="icon-button small danger" type="submit" title="Delete tag" aria-label="Delete tag">
                 <i data-lucide="trash-2"></i>

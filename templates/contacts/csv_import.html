@@ -6,6 +6,10 @@
     <h1 class="page-title">Import CSV</h1>
     <p class="page-subtitle">Valid rows are saved; failed rows stay in the report.</p>
   </div>
+  <div class="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+    <strong>Primary fields only.</strong> Import reads first name, last name, email, phone, company, job title, notes, and birthday.
+    CSV export uses the same columns. Groups, tags, and extra phone/email rows are not included.
+  </div>
   <div class="panel">
     <form class="stack" method="post" enctype="multipart/form-data">
       {% csrf_token %}

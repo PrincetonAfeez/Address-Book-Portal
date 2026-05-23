@@ -23,8 +23,8 @@
     </a>
   </td>
   <td class="px-3 py-3 text-sm text-slate-700">{{ contact.company|default:"-" }}</td>
-  <td class="hidden px-3 py-3 text-sm text-slate-700 md:table-cell">{{ contact.email|default:"-" }}</td>
-  <td class="hidden px-3 py-3 text-sm text-slate-700 lg:table-cell">{{ contact.phone|default:"-" }}</td>
+  <td class="hidden px-3 py-3 text-sm text-slate-700 md:table-cell">{{ contact.display_email|default:"-" }}</td>
+  <td class="hidden px-3 py-3 text-sm text-slate-700 lg:table-cell">{{ contact.display_phone|default:"-" }}</td>
   <td class="hidden px-3 py-3 text-sm text-slate-500 sm:table-cell">{{ contact.created_at|date:"M j, Y" }}</td>
   <td class="px-3 py-3 text-sm text-slate-500">{{ contact.updated_at|date:"M j, Y" }}</td>
   <td class="px-3 py-3">

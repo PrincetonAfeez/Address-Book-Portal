@@ -82,3 +82,19 @@ class VcardBulkExportTests(TestCase):
         )
         payload = contact_to_vcard(contact)
         self.assertIn("TITLE:Engineer", payload)
+
+    def test_vcard_includes_photo_when_present(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from contacts.exporters import contact_to_vcard
+
+        contact = Contact.objects.create(owner=self.user, first_name="Ada", last_name="Lovelace")
+        contact.photo.save(
+            "ada.jpg",
+            SimpleUploadedFile("ada.jpg", b"fake-image-bytes", content_type="image/jpeg"),
+            save=True,
+        )
+
+        payload = contact_to_vcard(contact)
+
+        self.assertIn("PHOTO;ENCODING=b;TYPE=JPEG:", payload)

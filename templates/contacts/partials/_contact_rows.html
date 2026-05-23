@@ -4,7 +4,13 @@
     {% if paginator.count %}
       Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} contacts
     {% else %}
-      No contacts yet — add your first one
+      {% if mode == "archive" %}
+        No archived contacts
+      {% elif mode == "favorites" %}
+        No favorite contacts yet
+      {% else %}
+        No contacts yet — add your first one
+      {% endif %}
     {% endif %}
   </p>
   {% include "contacts/partials/_bulk_bar.html" with oob=True %}
@@ -13,6 +19,9 @@
   <div id="toast-stack" hx-swap-oob="beforeend">
     {% include "partials/messages.html" %}
   </div>
+  {% if clear_modal %}
+    <div id="modal-root" hx-swap-oob="innerHTML"></div>
+  {% endif %}
 {% endif %}
 {% for contact in contacts %}
   {% include "contacts/partials/_contact_row.html" with contact=contact %}

@@ -39,6 +39,7 @@ class ImportExportTests(TestCase):
                 "errors": {"first_name": ["First name is required."]},
             }
         ]
+        session["last_import_errors_user_id"] = str(self.user.pk)
         session.save()
 
         response = self.client.get(reverse("contacts:csv_error_report"))
@@ -125,6 +126,8 @@ class ImportExportTests(TestCase):
 
         self.assertIn("First Name", payload)
         self.assertIn("Ada", payload)
+        self.assertNotIn("Favorite", payload)
+        self.assertNotIn("Archived", payload)
 
     def test_vcard_escapes_values_and_folds_long_lines(self):
         contact = Contact.objects.create(

@@ -107,6 +107,20 @@ class Contact(models.Model):
             return ""
         return reverse("contacts:photo", kwargs={"pk": self.pk})
 
+    @property
+    def display_phone(self):
+        if self.phone:
+            return self.phone
+        phone = self.phones.first()
+        return phone.number if phone else ""
+
+    @property
+    def display_email(self):
+        if self.email:
+            return self.email
+        email = self.emails.first()
+        return email.address if email else ""
+
     def clean(self):
         if self.phone:
             self.phone = normalize_phone_number(self.phone)
@@ -207,6 +221,10 @@ class Group(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Tag(models.Model):

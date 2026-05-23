@@ -1,10 +1,12 @@
 """CSV and vCard export helpers.
 
 CSV export/import covers primary scalar contact fields only — not groups, tags,
-or secondary phone/email rows. See docs/REPORT.md.
+favorite/archive flags, or secondary phone/email rows. See docs/REPORT.md.
 """
 
+import base64
 import csv
+import mimetypes
 
 from .csv_utils import CsvEcho
 from .models import Email, Phone
@@ -31,8 +33,6 @@ def csv_contact_rows(queryset):
             "Company",
             "Job Title",
             "Birthday",
-            "Favorite",
-            "Archived",
             "Notes",
         ]
     )
@@ -46,8 +46,6 @@ def csv_contact_rows(queryset):
                 contact.company,
                 contact.job_title,
                 contact.birthday.isoformat() if contact.birthday else "",
-                "yes" if contact.is_favorite else "no",
-                "yes" if contact.is_archived else "no",
                 contact.notes,
             ]
         )
@@ -103,6 +101,21 @@ def format_vcard_email(address, label):
     return f"EMAIL;TYPE={label.upper()}:{escape_vcard(address)}"
 
 
+def _vcard_photo_line(contact):
+    if not contact.photo:
+        return None
+    try:
+        with contact.photo.open("rb") as photo_file:
+            encoded = base64.b64encode(photo_file.read()).decode("ascii")
+    except OSError:
+        return None
+    content_type, _ = mimetypes.guess_type(contact.photo.name)
+    photo_type = (content_type or "image/jpeg").split("/")[-1].upper()
+    if photo_type == "JPG":
+        photo_type = "JPEG"
+    return f"PHOTO;ENCODING=b;TYPE={photo_type}:{encoded}"
+
+
 def contact_to_vcard(contact):
     lines = [
         "BEGIN:VCARD",
@@ -126,6 +139,9 @@ def contact_to_vcard(contact):
         lines.append(f"BDAY:{contact.birthday.isoformat()}")
     if contact.notes:
         lines.append(f"NOTE:{escape_vcard(contact.notes)}")
+    photo_line = _vcard_photo_line(contact)
+    if photo_line:
+        lines.append(photo_line)
     lines.append("END:VCARD")
     return "\r\n".join(fold_line(line) for line in lines) + "\r\n"
 

@@ -6,11 +6,12 @@
       hx-indicator="#table-indicator"
       {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
   <input type="hidden" name="list_mode" value="{{ mode }}">
-  <span id="selected-count" class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
+  <span class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
   {{ bulk_form.action }}
   {{ bulk_form.group }}
   {{ bulk_form.tag }}
-  <button class="icon-button" type="submit" title="Apply bulk action" aria-label="Apply bulk action">
+  <button class="icon-button" type="submit" title="Apply bulk action" aria-label="Apply bulk action"
+          hx-on:click="const action = this.form.querySelector('[name=action]'); if (action && action.value === 'delete' && !confirm('Permanently delete the selected contacts? This cannot be undone.')) { event.preventDefault(); event.stopPropagation(); }">
     <i data-lucide="play"></i>
   </button>
   {% if show_clear|default:True %}

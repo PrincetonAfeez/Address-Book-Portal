@@ -33,8 +33,8 @@
     <div class="panel lg:col-span-2">
       <h2 class="panel-title">Details</h2>
       <dl class="detail-grid">
-        <dt>Primary email</dt><dd>{{ contact.email|default:"-" }}</dd>
-        <dt>Primary phone</dt><dd>{{ contact.phone|default:"-" }}</dd>
+        <dt>Primary email</dt><dd>{{ contact.display_email|default:"-" }}</dd>
+        <dt>Primary phone</dt><dd>{{ contact.display_phone|default:"-" }}</dd>
         <dt>Company</dt><dd>{{ contact.company|default:"-" }}</dd>
         <dt>Birthday</dt><dd>{{ contact.birthday|date:"M j, Y"|default:"-" }}</dd>
         <dt>Notes</dt><dd class="whitespace-pre-wrap">{{ contact.notes|default:"-" }}</dd>

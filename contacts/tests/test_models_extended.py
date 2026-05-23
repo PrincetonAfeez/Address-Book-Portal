@@ -103,6 +103,12 @@ class ModelExtendedTests(TestCase):
         with self.assertRaises(ValidationError):
             contact.save()
 
+    def test_contact_display_email_falls_back_to_related_row(self):
+        contact = Contact.objects.create(owner=self.user, first_name="Ada")
+        Email.objects.create(contact=contact, address="ada@example.com", label=Email.OTHER)
+        self.assertEqual(contact.display_email, "ada@example.com")
+        self.assertEqual(contact.display_phone, "")
+
     def test_restore_contact(self):
         contact = Contact.objects.create(owner=self.user, first_name="Ada", is_archived=True)
         contact.restore()

@@ -19,7 +19,14 @@ from .models import Contact, Group, Tag
 from .utils import upcoming_birthdays
 
 
-SELECTED_SESSION_KEY = "selected_contact_ids"
+from .session_selection import (
+    SELECTED_SESSION_KEY,
+    SESSION_USER_KEY,
+    clear_import_errors,
+    clear_selected_ids,
+    get_import_errors,
+    set_import_errors,
+)
 SORTS = {
     "name": ("last_name", "first_name"),
     "company": ("company", "last_name", "first_name"),
@@ -57,6 +64,9 @@ def selected_ids(request):
 
 def set_selected_ids(request, ids):
     request.session[SELECTED_SESSION_KEY] = sorted({str(contact_id) for contact_id in ids})
+    user = getattr(request, "user", None)
+    if getattr(user, "is_authenticated", False):
+        request.session[SESSION_USER_KEY] = str(user.pk)
     request.session.modified = True
 
 
@@ -95,7 +105,7 @@ def htmx_list_or_redirect(request, *, redirect_to, refresh_modes=None):
         return None
     list_mode = request_list_mode(request)
     if list_mode and list_mode not in (refresh_modes or set()):
-        return rows_response(request, mode=list_mode)
+        return rows_response(request, mode=list_mode, clear_modal=True)
     return htmx_redirect(redirect_to)
 
 
@@ -135,6 +145,10 @@ def list_context(request, mode="active"):
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
     selected = prune_selected_ids(request)
+    mode_selected_ids = {
+        str(pk)
+        for pk in selected_contacts_for_mode(request.user, selected, mode).values_list("pk", flat=True)
+    }
     page_contact_ids = {str(contact.id) for contact in page_obj.object_list}
     return {
         "mode": mode,
@@ -145,8 +159,8 @@ def list_context(request, mode="active"):
         "groups": Group.objects.for_user(request.user).order_by("name"),
         "tags": Tag.objects.for_user(request.user).order_by("name"),
         "selected_ids": selected,
-        "selected_count": len(selected),
-        "page_all_selected": bool(page_contact_ids and page_contact_ids <= selected),
+        "selected_count": len(mode_selected_ids),
+        "page_all_selected": bool(page_contact_ids and page_contact_ids <= mode_selected_ids),
         "bulk_form": BulkActionForm(user=request.user, list_mode=mode),
         "sort": request.GET.get("sort", "name"),
         "direction": request.GET.get("dir", "asc"),
@@ -155,8 +169,17 @@ def list_context(request, mode="active"):
     }
 
 
-def rows_response(request, mode="active", status=200):
+def htmx_create_response(request, contact, list_mode):
+    if list_mode == "active":
+        return rows_response(request, mode="active", clear_modal=True)
+    if list_mode == "favorites" and contact.is_favorite:
+        return rows_response(request, mode="favorites", clear_modal=True)
+    return htmx_redirect(contact.get_absolute_url())
+
+
+def rows_response(request, mode="active", status=200, *, clear_modal=False):
     context = list_context(request, mode)
+    context["clear_modal"] = clear_modal
     return render(
         request,
         "contacts/partials/_contact_rows.html",
@@ -201,12 +224,11 @@ def contact_list(request, mode="active"):
 @login_required
 @require_http_methods(["GET", "POST"])
 def organization(request):
-    group_form = GroupForm(prefix="group", user=request.user)
-    tag_form = TagForm(prefix="tag", user=request.user)
-
-    if request.method == "POST" and request.POST.get("kind") == "group":
+    if request.method == "POST":
         group_form = GroupForm(request.POST, prefix="group", user=request.user)
-        if group_form.is_valid():
+        tag_form = TagForm(request.POST, prefix="tag", user=request.user)
+        kind = request.POST.get("kind")
+        if kind == "group" and group_form.is_valid():
             group = group_form.save(commit=False)
             group.owner = request.user
             try:
@@ -216,10 +238,7 @@ def organization(request):
             else:
                 messages.success(request, f"{group.name} group created.")
                 return redirect("contacts:organization")
-
-    if request.method == "POST" and request.POST.get("kind") == "tag":
-        tag_form = TagForm(request.POST, prefix="tag", user=request.user)
-        if tag_form.is_valid():
+        elif kind == "tag" and tag_form.is_valid():
             tag = tag_form.save(commit=False)
             tag.owner = request.user
             try:
@@ -229,6 +248,9 @@ def organization(request):
             else:
                 messages.success(request, f"{tag.name} tag created.")
                 return redirect("contacts:organization")
+    else:
+        group_form = GroupForm(prefix="group", user=request.user)
+        tag_form = TagForm(prefix="tag", user=request.user)
 
     return render(
         request,
@@ -288,13 +310,8 @@ def contact_create(request):
         contact.save(resize_photo=bool(form.cleaned_data.get("photo")))
         form.sync_primary_records(contact)
         messages.success(request, f"{contact.display_name} was added.")
-        htmx_response = htmx_list_or_redirect(
-            request,
-            redirect_to=contact.get_absolute_url(),
-            refresh_modes={"archive", "favorites"},
-        )
-        if htmx_response:
-            return htmx_response
+        if is_htmx(request):
+            return htmx_create_response(request, contact, list_mode)
         return redirect("contacts:detail", pk=contact.pk)
 
     template = "contacts/partials/_contact_form.html" if is_htmx(request) else "contacts/contact_form.html"
@@ -442,7 +459,7 @@ def selection_page(request):
     if request.POST.get("selected") == "true":
         current |= owned_page_ids
     else:
-        current -= page_ids
+        current -= owned_page_ids
     set_selected_ids(request, current)
     list_mode = request_list_mode(request, default="active")
     return rows_response(request, mode=list_mode)
@@ -500,16 +517,20 @@ def bulk_action(request):
 def csv_import(request):
     form = CSVImportForm(request.POST or None, request.FILES or None)
     result = None
+    if request.method == "POST":
+        clear_import_errors(request)
     if request.method == "POST" and form.is_valid():
         result = stream_import_contacts(request.user, form.cleaned_data["file"])
         if result.errors:
-            request.session["last_import_errors"] = [
-                {"row_number": err.row_number, "data": err.data, "errors": err.errors}
-                for err in result.errors
-            ]
+            set_import_errors(
+                request,
+                [
+                    {"row_number": err.row_number, "data": err.data, "errors": err.errors}
+                    for err in result.errors
+                ],
+            )
         else:
-            request.session.pop("last_import_errors", None)
-        request.session.modified = True
+            clear_import_errors(request)
         if result.imported_count:
             messages.success(request, f"{result.imported_count} contacts imported.")
         if result.failed_count:
@@ -521,7 +542,7 @@ def csv_import(request):
 def csv_error_report(request):
     from .importers import RowError
 
-    raw_errors = request.session.get("last_import_errors")
+    raw_errors = get_import_errors(request)
     if not raw_errors:
         raise Http404("No import error report is available.")
     errors = [
@@ -530,8 +551,7 @@ def csv_error_report(request):
     ]
     response = StreamingHttpResponse(error_report_rows(errors), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="address-book-import-errors.csv"'
-    request.session.pop("last_import_errors", None)
-    request.session.modified = True
+    clear_import_errors(request)
     return response
 
 

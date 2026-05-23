@@ -97,7 +97,7 @@ Generator-based row yielding
 vCard Export
 
 Hand-rolled vCard 3.0 generator — no vobject or python-vobject
-Handles RFC 6350 essentials: line folding at 75 chars, comma/semicolon escaping, multi-value fields
+Handles RFC 2426 essentials: line folding at 75 chars, comma/semicolon escaping, multi-value fields
 Single contact export and bulk export
 Unit tested against a few known-good reference vCards
 
@@ -134,11 +134,11 @@ CSV export tests (streaming behavior, filter preservation)
 vCard generator tests (escaping, line folding)
 View tests (auth required, cross-user access blocked)
 HTMX endpoint tests (partial template responses)
-Target ~50% coverage — focused on the parts that would hurt if they broke
+Coverage target ~96% on application code — focused on the parts that would hurt if they broke
 
 Documentation
 
-README: what it is, screenshots, local setup, env vars, run instructions, deploy notes, test commands
+README: what it is, local setup, env vars, run instructions, deploy notes, test commands
 ADR 1: Why HTMX over a JS framework (SPA tax vs. hypermedia, team-of-one reality)
 ADR 2: Why hand-rolled phone validation and vCard generation (zero-dependency surface, learning value, scope of needed subset)
 ADR 3: Why per-user ownership over RBAC for v1 (YAGNI — single-tenant is the right shape until it isn't)

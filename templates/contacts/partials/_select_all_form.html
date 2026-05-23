@@ -1,9 +1,5 @@
-<form id="select-all-form"
-      hx-post="{% url 'contacts:selection_page' %}?{{ request.GET.urlencode }}"
-      hx-target="#contact-table-body"
-      hx-swap="innerHTML"
-      hx-indicator="#table-indicator"
-      {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
+<div id="select-all-form"
+     {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
   {% for contact in contacts %}
     <input type="hidden" name="contact_ids" value="{{ contact.id }}">
   {% endfor %}
@@ -12,5 +8,10 @@
   <input type="checkbox"
          aria-label="Select all on page"
          {% if page_all_selected %}checked{% endif %}
-         onchange="this.form.requestSubmit()">
-</form>
+         hx-post="{% url 'contacts:selection_page' %}?{{ request.GET.urlencode }}"
+         hx-target="#contact-table-body"
+         hx-swap="innerHTML"
+         hx-indicator="#table-indicator"
+         hx-include="#select-all-form"
+         hx-on:click="this.closest('#select-all-form').querySelector('[name=selected]').value = this.checked ? 'false' : 'true'">
+</div>

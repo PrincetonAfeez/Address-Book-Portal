@@ -31,6 +31,32 @@ class AuditFixTests(TestCase):
         response = self.client.get(reverse("contacts:vcard_one", args=[contact.pk]))
         self.assertEqual(response.status_code, 403)
 
+    def test_cross_user_restore_returns_403(self):
+        contact = Contact.objects.create(owner=self.other, first_name="Grace", is_archived=True)
+        response = self.client.post(reverse("contacts:restore", args=[contact.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_cross_user_favorite_toggle_returns_403(self):
+        contact = Contact.objects.create(owner=self.other, first_name="Grace")
+        response = self.client.post(reverse("contacts:favorite", args=[contact.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_cross_user_group_delete_returns_403(self):
+        from contacts.models import Group
+
+        group = Group.objects.create(owner=self.other, name="Theirs")
+        response = self.client.post(reverse("contacts:group_delete", args=[group.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_cross_user_tag_delete_returns_403(self):
+        tag = Tag.objects.create(owner=self.other, name="Theirs", color="#2563eb")
+        response = self.client.post(reverse("contacts:tag_delete", args=[tag.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_csv_import_page_warns_about_primary_fields_only(self):
+        response = self.client.get(reverse("contacts:csv_import"))
+        self.assertContains(response, "Primary fields only")
+
     def test_signup_redirects_authenticated_user(self):
         response = self.client.get(reverse("signup"))
         self.assertRedirects(response, reverse("contacts:dashboard"))
@@ -44,6 +70,17 @@ class AuditFixTests(TestCase):
         )
         response = self.client.get(reverse("contacts:favorites"))
         self.assertContains(response, "ArchivedStar")
+
+    def test_csv_import_clears_previous_error_session_on_new_upload(self):
+        session = self.client.session
+        session["last_import_errors"] = [{"row_number": 2, "data": {}, "errors": {}}]
+        session.save()
+        csv_body = b"First Name,Last Name\nAda,Lovelace\n"
+        self.client.post(
+            reverse("contacts:csv_import"),
+            {"file": SimpleUploadedFile("contacts.csv", csv_body, content_type="text/csv")},
+        )
+        self.assertNotIn("last_import_errors", self.client.session)
 
     def test_csv_import_renders_row_level_error_message(self):
         csv_body = b"First Name,Last Name\nAda,Lovelace,Extra\n"
@@ -93,6 +130,7 @@ class AuditFixTests(TestCase):
         session["last_import_errors"] = [
             {"row_number": 2, "data": {}, "errors": {"first_name": ["Required."]}}
         ]
+        session["last_import_errors_user_id"] = str(self.user.pk)
         session.save()
         response = self.client.get(reverse("contacts:csv_error_report"))
         self.assertEqual(response.status_code, 200)

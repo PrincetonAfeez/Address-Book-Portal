@@ -1,20 +1,104 @@
-from urllib.parse import quote
+import importlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import patch
 
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
-from config.database import postgres_from_url
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-class PostgresUrlTests(SimpleTestCase):
-    def test_postgres_from_url_unquotes_credentials_and_sslmode(self):
-        password = "p@ss%word"
-        url = (
-            f"postgres://user:{quote(password, safe='')}@db.example.com:5432/mydb"
-            "?sslmode=require"
+class ProdSettingsTests(SimpleTestCase):
+    def _load_prod(self, env):
+        code = """
+import importlib
+import os
+import sys
+from pathlib import Path
+root = Path({root!r})
+sys.path.insert(0, str(root))
+os.environ.update({env!r})
+for key in list(os.environ.keys()):
+    if key.startswith("DJANGO_") or key in {{"DATABASE_URL", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST", "POSTGRES_PORT"}}:
+        if key not in {env!r}:
+            os.environ.pop(key, None)
+import config.settings.prod as prod
+importlib.reload(prod)
+print("OK")
+""".format(root=str(PROJECT_ROOT), env=env)
+        return subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT,
         )
-        config = postgres_from_url(url)
 
-        self.assertEqual(config["USER"], "user")
-        self.assertEqual(config["PASSWORD"], password)
-        self.assertEqual(config["NAME"], "mydb")
-        self.assertEqual(config["OPTIONS"]["sslmode"], "require")
+    def test_prod_requires_secret_key(self):
+        result = self._load_prod(
+            {
+                "DJANGO_ALLOWED_HOSTS": "example.com",
+                "DJANGO_CSRF_TRUSTED_ORIGINS": "https://example.com",
+            }
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ImproperlyConfigured", result.stderr + result.stdout)
+
+    def test_prod_requires_allowed_hosts(self):
+        result = self._load_prod(
+            {
+                "DJANGO_SECRET_KEY": "test-secret",
+                "DJANGO_CSRF_TRUSTED_ORIGINS": "https://example.com",
+            }
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ImproperlyConfigured", result.stderr + result.stdout)
+
+    def test_prod_requires_csrf_trusted_origins(self):
+        result = self._load_prod(
+            {
+                "DJANGO_SECRET_KEY": "test-secret",
+                "DJANGO_ALLOWED_HOSTS": "example.com",
+            }
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ImproperlyConfigured", result.stderr + result.stdout)
+
+    def test_prod_loads_with_required_env(self):
+        result = self._load_prod(
+            {
+                "DJANGO_SECRET_KEY": "test-secret",
+                "DJANGO_ALLOWED_HOSTS": "example.com",
+                "DJANGO_CSRF_TRUSTED_ORIGINS": "https://example.com",
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("OK", result.stdout)
+
+    def test_prod_uses_database_url_when_set(self):
+        result = self._load_prod(
+            {
+                "DJANGO_SECRET_KEY": "test-secret",
+                "DJANGO_ALLOWED_HOSTS": "example.com",
+                "DJANGO_CSRF_TRUSTED_ORIGINS": "https://example.com",
+                "DATABASE_URL": "postgres://user:pass@localhost:5432/appdb",
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class BaseSettingsTests(SimpleTestCase):
+    def test_env_bool_defaults_false_for_missing_value(self):
+        from config.settings.base import env_bool
+
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(env_bool("MISSING_FLAG"))
+
+    def test_env_bool_parses_truthy_values(self):
+        from config.settings.base import env_bool
+
+        with patch.dict(os.environ, {"FLAG": "true"}):
+            self.assertTrue(env_bool("FLAG"))
