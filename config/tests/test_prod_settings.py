@@ -1,3 +1,5 @@
+""" Test production settings """
+
 import importlib
 import os
 import subprocess
@@ -88,6 +90,41 @@ print("OK")
             }
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_prod_hsts_subdomains_and_preload_are_configurable(self):
+        code = """
+import os, sys
+from pathlib import Path
+root = Path({root!r})
+sys.path.insert(0, str(root))
+os.environ.update({env!r})
+for key in list(os.environ.keys()):
+    if key.startswith("DJANGO_") and key not in {env!r}:
+        os.environ.pop(key, None)
+import importlib
+import config.settings.prod as prod
+importlib.reload(prod)
+assert prod.SECURE_HSTS_INCLUDE_SUBDOMAINS is True
+assert prod.SECURE_HSTS_PRELOAD is True
+print("OK")
+""".format(
+            root=str(PROJECT_ROOT),
+            env={
+                "DJANGO_SECRET_KEY": "test-secret",
+                "DJANGO_ALLOWED_HOSTS": "example.com",
+                "DJANGO_CSRF_TRUSTED_ORIGINS": "https://example.com",
+                "DJANGO_HSTS_INCLUDE_SUBDOMAINS": "true",
+                "DJANGO_HSTS_PRELOAD": "true",
+            },
+        )
+        check = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT,
+        )
+        self.assertEqual(check.returncode, 0, check.stderr)
+        self.assertIn("OK", check.stdout)
 
 
 class BaseSettingsTests(SimpleTestCase):
