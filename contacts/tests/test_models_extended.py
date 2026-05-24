@@ -1,7 +1,9 @@
+""" Test models extended for the contacts app """
+
 from io import BytesIO
 
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import Http404
 from django.test import TestCase
@@ -18,9 +20,9 @@ class ModelExtendedTests(TestCase):
     def test_for_user_returns_none_for_anonymous(self):
         self.assertEqual(Contact.objects.for_user(None).count(), 0)
 
-    def test_get_for_user_or_404_raises_403_for_other_owner(self):
+    def test_get_for_user_or_404_raises_404_for_other_owner(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace")
-        with self.assertRaises(PermissionDenied):
+        with self.assertRaises(Http404):
             Contact.objects.get_for_user_or_404(self.user, pk=contact.pk)
 
     def test_get_for_user_or_404_raises_404_when_missing(self):
