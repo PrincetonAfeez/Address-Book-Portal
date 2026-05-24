@@ -1,3 +1,5 @@
+""" Test views actions for the contacts app """
+
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -292,6 +294,7 @@ class ContactActionViewTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Check the bulk action fields.")
 
     def test_bulk_action_redirects_archive_without_htmx(self):
         contact = Contact.objects.create(owner=self.user, first_name="Ada", is_archived=True)
@@ -322,7 +325,7 @@ class ContactActionViewTests(TestCase):
             {"file": SimpleUploadedFile("contacts.csv", csv_body, content_type="text/csv")},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "1 contacts imported")
+        self.assertContains(response, "1 contact imported")
 
     def test_csv_import_view_reports_failures(self):
         csv_body = b"First Name,Last Name\n,Missing\n"
@@ -331,7 +334,7 @@ class ContactActionViewTests(TestCase):
             {"file": SimpleUploadedFile("contacts.csv", csv_body, content_type="text/csv")},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "rows failed")
+        self.assertContains(response, "failed validation")
 
     def test_csv_import_view_handles_non_utf8_without_500(self):
         csv_body = "First Name,Last Name\nJos\xe9,Gar\xe7a\n".encode("latin-1")
@@ -340,7 +343,7 @@ class ContactActionViewTests(TestCase):
             {"file": SimpleUploadedFile("contacts.csv", csv_body, content_type="text/csv")},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "rows failed")
+        self.assertContains(response, "failed validation")
 
     def test_vcard_bulk_export(self):
         Contact.objects.create(owner=self.user, first_name="Ada", last_name="Lovelace")

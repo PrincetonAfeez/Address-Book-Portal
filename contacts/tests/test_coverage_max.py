@@ -1,3 +1,5 @@
+""" Test coverage max for the contacts app """
+
 from io import BytesIO
 from unittest.mock import patch
 
@@ -142,6 +144,7 @@ class FormGapTests(TestCase):
         form = BulkActionForm(user=self.user, list_mode="archive")
         actions = [choice[0] for choice in form.fields["action"].choices]
         self.assertIn("delete", actions)
+        self.assertIn("restore", actions)
         self.assertNotIn("archive", actions)
 
 
@@ -194,12 +197,15 @@ class AdminExtendedTests(TestCase):
         admin = ContactAdmin(Contact, self.site)
         self.assertIn("Portal edits sync", admin.sync_warning(None))
 
-    def test_contact_admin_save_model_syncs_primary_records(self):
+    def test_contact_admin_save_related_syncs_primary_records(self):
+        from unittest.mock import Mock
+
         contact = Contact.objects.create(owner=self.user, first_name="Ada", phone="+14155552671")
         request = self.factory.post("/admin/")
         request.user = self.user
         admin = ContactAdmin(Contact, self.site)
-        admin.save_model(request, contact, form=None, change=True)
+        form = Mock(instance=contact)
+        admin.save_related(request, form, formsets=[], change=True)
         self.assertEqual(contact.phones.count(), 1)
 
     def test_group_admin_m2m_queryset_scoped_for_staff(self):
@@ -232,6 +238,17 @@ class AdminExtendedTests(TestCase):
         request.user = self.user
         admin = RelatedContactAdmin(Phone, self.site)
         self.assertEqual(list(admin.get_queryset(request)), [own_phone])
+
+    def test_related_contact_admin_scopes_contact_fk_for_staff(self):
+        own = Contact.objects.create(owner=self.user, first_name="Ada")
+        Contact.objects.create(owner=self.other, first_name="Bob")
+        self.user.is_staff = True
+        self.user.save()
+        request = self.factory.get("/admin/")
+        request.user = self.user
+        admin = RelatedContactAdmin(Phone, self.site)
+        field = admin.formfield_for_foreignkey(Phone.contact.field, request)
+        self.assertEqual(list(field.queryset), [own])
 
     def test_superuser_contact_admin_includes_owner_field(self):
         request = self.factory.get("/admin/")
@@ -332,6 +349,7 @@ class ViewGapTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Check the bulk action fields.")
         self.assertTrue(Contact.objects.filter(pk=contact.pk).exists())
 
     def test_selection_page_deselect_owned_ids_only(self):

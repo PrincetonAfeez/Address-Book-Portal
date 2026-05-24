@@ -1,3 +1,5 @@
+""" Test dashboard for the contacts app """
+
 from datetime import date, timedelta
 
 from django.contrib.auth.models import User

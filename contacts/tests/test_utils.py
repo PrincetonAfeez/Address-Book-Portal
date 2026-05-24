@@ -1,3 +1,5 @@
+""" Test utils for the contacts app """
+
 from datetime import date
 
 from django.test import SimpleTestCase

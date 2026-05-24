@@ -1,3 +1,5 @@
+""" Test audit fixes for the contacts app """
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -19,39 +21,56 @@ class AuditFixTests(TestCase):
             reverse("contacts:edit", args=[contact.pk]),
             {"first_name": "Hacked", "phone": ""},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_delete_returns_403(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace")
         response = self.client.post(reverse("contacts:delete", args=[contact.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_vcard_returns_403(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace")
         response = self.client.get(reverse("contacts:vcard_one", args=[contact.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_restore_returns_403(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace", is_archived=True)
         response = self.client.post(reverse("contacts:restore", args=[contact.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_favorite_toggle_returns_403(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace")
         response = self.client.post(reverse("contacts:favorite", args=[contact.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_group_delete_returns_403(self):
         from contacts.models import Group
 
         group = Group.objects.create(owner=self.other, name="Theirs")
         response = self.client.post(reverse("contacts:group_delete", args=[group.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_cross_user_tag_delete_returns_403(self):
         tag = Tag.objects.create(owner=self.other, name="Theirs", color="#2563eb")
         response = self.client.post(reverse("contacts:tag_delete", args=[tag.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
+
+    def test_cross_user_group_edit_returns_403(self):
+        from contacts.models import Group
+
+        group = Group.objects.create(owner=self.other, name="Theirs")
+        response = self.client.get(reverse("contacts:group_edit", args=[group.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_cross_user_tag_edit_returns_403(self):
+        tag = Tag.objects.create(owner=self.other, name="Theirs", color="#2563eb")
+        response = self.client.get(reverse("contacts:tag_edit", args=[tag.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_cross_user_purge_returns_403(self):
+        contact = Contact.objects.create(owner=self.other, first_name="Grace", is_archived=True)
+        response = self.client.post(reverse("contacts:purge", args=[contact.pk]))
+        self.assertEqual(response.status_code, 404)
 
     def test_csv_import_page_warns_about_primary_fields_only(self):
         response = self.client.get(reverse("contacts:csv_import"))
@@ -61,7 +80,7 @@ class AuditFixTests(TestCase):
         response = self.client.get(reverse("signup"))
         self.assertRedirects(response, reverse("contacts:dashboard"))
 
-    def test_favorites_list_includes_archived_favorites(self):
+    def test_favorites_list_excludes_archived_favorites(self):
         Contact.objects.create(
             owner=self.user,
             first_name="ArchivedStar",
@@ -69,11 +88,24 @@ class AuditFixTests(TestCase):
             is_archived=True,
         )
         response = self.client.get(reverse("contacts:favorites"))
-        self.assertContains(response, "ArchivedStar")
+        self.assertNotContains(response, "ArchivedStar")
 
-    def test_csv_import_clears_previous_error_session_on_new_upload(self):
+    def test_csv_import_preserves_previous_errors_on_invalid_upload(self):
         session = self.client.session
         session["last_import_errors"] = [{"row_number": 2, "data": {}, "errors": {}}]
+        session["last_import_errors_user_id"] = str(self.user.pk)
+        session.save()
+        response = self.client.post(
+            reverse("contacts:csv_import"),
+            {"file": SimpleUploadedFile("data.txt", b"a,b", content_type="text/plain")},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("last_import_errors", self.client.session)
+
+    def test_csv_import_clears_previous_error_session_on_successful_upload(self):
+        session = self.client.session
+        session["last_import_errors"] = [{"row_number": 2, "data": {}, "errors": {}}]
+        session["last_import_errors_user_id"] = str(self.user.pk)
         session.save()
         csv_body = b"First Name,Last Name\nAda,Lovelace\n"
         self.client.post(
@@ -125,7 +157,7 @@ class AuditFixTests(TestCase):
         with self.assertRaises(ValidationError):
             Tag.objects.create(owner=self.user, name="vip", color="#10b981")
 
-    def test_csv_error_report_clears_session(self):
+    def test_csv_error_report_keeps_session_until_next_import(self):
         session = self.client.session
         session["last_import_errors"] = [
             {"row_number": 2, "data": {}, "errors": {"first_name": ["Required."]}}
@@ -134,4 +166,6 @@ class AuditFixTests(TestCase):
         session.save()
         response = self.client.get(reverse("contacts:csv_error_report"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("last_import_errors", self.client.session)
+        self.assertIn("last_import_errors", self.client.session)
+        response = self.client.get(reverse("contacts:csv_error_report"))
+        self.assertEqual(response.status_code, 200)

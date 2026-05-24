@@ -1,3 +1,5 @@
+""" Test validators for the contacts app """
+
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 

@@ -1,3 +1,5 @@
+""" Test templatetags for the contacts app """
+
 from django.contrib.auth.models import User
 from django.template import Context, Template
 from django.test import RequestFactory, TestCase
@@ -44,3 +46,13 @@ class QuerystringTagTests(TestCase):
         ).render(Context({"request": request}))
         self.assertIn("q=new", rendered)
         self.assertNotIn("page=", rendered)
+
+    def test_qs_with_merges_get_params_without_double_question_mark(self):
+        request = self.factory.get("/contacts/", {"q": "ada"})
+        request.user = self.user
+        rendered = Template(
+            '{% load querystring %}/contacts/create/{% qs_with list_mode="active" %}'
+        ).render(Context({"request": request}))
+        self.assertIn("q=ada", rendered)
+        self.assertIn("list_mode=active", rendered)
+        self.assertNotIn("?&", rendered)

@@ -1,3 +1,5 @@
+""" Test views for the contacts app """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -16,13 +18,13 @@ class ContactViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response["Location"])
 
-    def test_cross_user_detail_returns_403(self):
+    def test_cross_user_detail_returns_404(self):
         contact = Contact.objects.create(owner=self.other, first_name="Grace")
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("contacts:detail", args=[contact.pk]))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_htmx_search_returns_rows_partial(self):
         Contact.objects.create(owner=self.user, first_name="Ada", company="Analytical Engines")
@@ -71,7 +73,7 @@ class ContactViewTests(TestCase):
         self.assertTrue(Contact.objects.filter(first_name="Ada").exists())
         self.assertContains(response, "Ada Lovelace")
 
-    def test_create_contact_via_htmx_from_archive_redirects_to_detail(self):
+    def test_create_contact_via_htmx_from_archive_refreshes_active_list(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -85,9 +87,9 @@ class ContactViewTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        contact = Contact.objects.get(first_name="Ada")
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], contact.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Contact.objects.filter(first_name="Ada", is_archived=False).exists())
+        self.assertContains(response, "Ada Lovelace")
 
     def test_duplicate_group_name_shows_form_error(self):
         Group.objects.create(owner=self.user, name="Friends")
@@ -133,7 +135,7 @@ class ContactViewTests(TestCase):
         self.assertContains(response, 'id="contact-')
         self.assertContains(response, "Ada Lovelace")
 
-    def test_create_non_favorite_via_htmx_from_favorites_redirects_to_detail(self):
+    def test_create_non_favorite_via_htmx_from_favorites_refreshes_active_list(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -147,9 +149,9 @@ class ContactViewTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        contact = Contact.objects.get(first_name="Bob")
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], contact.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Contact.objects.filter(first_name="Bob", is_favorite=False).exists())
+        self.assertContains(response, "Bob Plain")
 
     def test_modal_create_form_posts_to_create_url(self):
         self.client.force_login(self.user)

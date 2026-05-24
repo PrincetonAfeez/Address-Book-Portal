@@ -1,3 +1,5 @@
+""" Test contact photo for the contacts app """
+
 from io import BytesIO
 
 from django.contrib.auth.models import User
@@ -36,11 +38,11 @@ class ContactPhotoViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response["Location"])
 
-    def test_contact_photo_cross_user_returns_403(self):
+    def test_contact_photo_cross_user_returns_404(self):
         contact = self._contact_with_photo(self.other)
         self.client.force_login(self.user)
         response = self.client.get(reverse("contacts:photo", args=[contact.pk]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_contact_photo_returns_image_for_owner(self):
         contact = self._contact_with_photo(self.user)
@@ -48,10 +50,18 @@ class ContactPhotoViewTests(TestCase):
         response = self.client.get(reverse("contacts:photo", args=[contact.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response["Content-Type"].startswith("image/"))
+        self.assertEqual(response["Cache-Control"], "private, no-store")
         self.assertGreater(len(b"".join(response.streaming_content)), 0)
 
     def test_contact_photo_404_when_missing(self):
         contact = Contact.objects.create(owner=self.user, first_name="Ada")
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("contacts:photo", args=[contact.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_contact_photo_404_when_file_missing_on_disk(self):
+        contact = self._contact_with_photo(self.user)
+        contact.photo.storage.delete(contact.photo.name)
         self.client.force_login(self.user)
         response = self.client.get(reverse("contacts:photo", args=[contact.pk]))
         self.assertEqual(response.status_code, 404)

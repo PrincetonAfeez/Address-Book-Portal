@@ -1,3 +1,5 @@
+""" Test view helpers for the contacts app """
+
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
@@ -26,6 +28,7 @@ class ViewHelperTests(TestCase):
     def test_selected_ids_round_trip(self):
         request = self.factory.get("/")
         request.session = self.client.session
+        request.user = self.user
         views.set_selected_ids(request, ["3", "1", 3])
         self.assertEqual(views.selected_ids(request), {"1", "3"})
 
@@ -99,6 +102,28 @@ class ViewHelperTests(TestCase):
         request.user = self.user
         qs = views.base_contact_queryset(request)
         self.assertEqual(list(qs), [tagged])
+
+    def test_base_contact_queryset_invalid_group_returns_empty(self):
+        Contact.objects.create(owner=self.user, first_name="Ada")
+        request = self.factory.get("/", {"group": "9999"})
+        request.user = self.user
+        self.assertEqual(list(views.base_contact_queryset(request)), [])
+
+    def test_base_contact_queryset_invalid_tag_returns_empty(self):
+        Contact.objects.create(owner=self.user, first_name="Ada")
+        request = self.factory.get("/", {"tag": "9999"})
+        request.user = self.user
+        self.assertEqual(list(views.base_contact_queryset(request)), [])
+
+    def test_base_contact_queryset_other_users_group_returns_empty(self):
+        from contacts.models import Group
+
+        other = User.objects.create_user("grace", password="pass")
+        group = Group.objects.create(owner=other, name="Theirs")
+        Contact.objects.create(owner=self.user, first_name="Ada")
+        request = self.factory.get("/", {"group": str(group.pk)})
+        request.user = self.user
+        self.assertEqual(list(views.base_contact_queryset(request)), [])
 
     def test_base_contact_queryset_desc_sort(self):
         Contact.objects.create(owner=self.user, first_name="Zed", last_name="Zulu")
