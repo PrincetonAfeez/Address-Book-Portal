@@ -1,7 +1,9 @@
+""" Test exporters unit for the contacts app """
+
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 
-from contacts.exporters import Echo, escape_vcard, fold_line, vcards_for_contacts
+from contacts.exporters import Echo, escape_vcard, fold_line, safe_csv_cell, vcards_for_contacts
 from contacts.models import Contact, Email, Phone
 
 
@@ -32,6 +34,13 @@ class ExporterUnitTests(SimpleTestCase):
 
     def test_fold_line_short_unchanged(self):
         self.assertEqual(fold_line("short"), "short")
+
+    def test_safe_csv_cell_prefixes_formula_like_values(self):
+        self.assertEqual(safe_csv_cell("=SUM(A1)"), "'=SUM(A1)")
+        self.assertEqual(safe_csv_cell("+14155552671"), "'+14155552671")
+        self.assertEqual(safe_csv_cell("-cmd"), "'-cmd")
+        self.assertEqual(safe_csv_cell("@mention"), "'@mention")
+        self.assertEqual(safe_csv_cell("Ada"), "Ada")
 
 
 class VcardBulkExportTests(TestCase):
