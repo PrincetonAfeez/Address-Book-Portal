@@ -1,3 +1,5 @@
+""" Test forms for the contacts app """
+
 from io import BytesIO
 from unittest.mock import patch
 
@@ -57,8 +59,10 @@ class ContactFormTests(TestCase):
         form = ContactForm(instance=contact)
         form.sync_primary_records(contact)
 
-        self.assertEqual(contact.phones.get().number, "+14155552671")
-        self.assertEqual(contact.phones.get().label, Phone.MOBILE)
+        phone = contact.phones.get()
+        self.assertEqual(phone.number, "+14155552671")
+        self.assertEqual(phone.label, Phone.MOBILE)
+        self.assertTrue(phone.is_scalar_sync)
 
     def test_first_name_is_required(self):
         form = ContactForm(data={"first_name": "", "phone": ""})
