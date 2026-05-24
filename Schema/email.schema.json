@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/address-book-portal/schema/email.schema.json",
+  "title": "Email",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "readOnly": true
+    },
+    "contact_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "address": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254
+    },
+    "label": {
+      "type": "string",
+      "enum": ["work", "home", "other"],
+      "default": "other"
+    }
+  },
+  "required": ["contact_id", "address"]
+}

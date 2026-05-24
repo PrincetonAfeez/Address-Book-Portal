@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/address-book-portal/schema/contact.schema.json",
+  "title": "Contact",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "readOnly": true
+    },
+    "owner_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "ID of the authenticated Django user who owns this contact."
+    },
+    "first_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "last_name": {
+      "type": "string",
+      "maxLength": 80,
+      "default": ""
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254,
+      "default": ""
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 32,
+      "default": ""
+    },
+    "company": {
+      "type": "string",
+      "maxLength": 120,
+      "default": ""
+    },
+    "job_title": {
+      "type": "string",
+      "maxLength": 120,
+      "default": ""
+    },
+    "notes": {
+      "type": "string",
+      "default": ""
+    },
+    "birthday": {
+      "type": ["string", "null"],
+      "format": "date",
+      "default": null
+    },
+    "photo": {
+      "type": "string",
+      "description": "Stored photo path or URL returned by the application.",
+      "default": ""
+    },
+    "is_favorite": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "phone_ids": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "default": []
+    },
+    "email_ids": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "default": []
+    },
+    "group_ids": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "default": []
+    },
+    "tag_ids": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "default": []
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true
+    }
+  },
+  "required": ["owner_id", "first_name"]
+}
