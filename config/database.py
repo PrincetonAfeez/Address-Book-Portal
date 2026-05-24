@@ -1,5 +1,6 @@
-from urllib.parse import parse_qs, unquote, urlparse
+""" Database settings for the project """
 
+from urllib.parse import parse_qs, unquote, urlparse
 
 def postgres_from_url(database_url):
     parsed = urlparse(database_url)
