@@ -25,4 +25,5 @@ The related models remain in place for:
 - The v1 UI edits only primary scalar fields; detail pages also list related records.
 - Search matches both scalar fields and related rows.
 - Admin or shell can add extra labeled phones/emails that the form does not surface.
+- Rows mirrored from scalar fields are marked `is_scalar_sync=True`; sync only updates or removes those rows, leaving other labeled phones/emails intact.
 - A future version can drop scalars or add formsets once multi-value editing is required.

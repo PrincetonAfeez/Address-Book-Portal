@@ -26,7 +26,9 @@ Models / forms / validators / importers / exporters
 SQLite (dev) or PostgreSQL (prod)
 ```
 
-**Ownership:** `OwnedManager.for_user()` scopes queries; `get_for_user_or_404()` returns 403 when a row exists but belongs to another user.
+**Ownership:** `OwnedManager.for_user()` scopes queries; `get_for_user_or_404()` returns **404** for both missing and unauthorized rows (no cross-user existence leak).
+
+**Frontend CDN:** HTMX and Lucide load from unpkg with pinned versions and Subresource Integrity. Tailwind uses the runtime CDN compiler, which cannot use a fixed SRI hash; vendoring would improve offline reproducibility.
 
 **HTMX:** List mutations swap `#contact-table-body`; modals post to create/edit endpoints and either refresh rows or redirect via `HX-Redirect`.
 
@@ -48,12 +50,14 @@ See [ADR 0001](adr/0001-htmx-over-spa.md), [ADR 0002](adr/0002-hand-rolled-phone
 ## Limitations
 
 1. **Primary-field UI** — Only one phone and email are editable in forms; related models exist for export and future use (ADR 0004).
-2. **Favorites vs archive** — Favorited contacts remain visible in the Favorites view even when archived; the main contact list still hides archived rows.
+2. **Favorites vs archive** — Archiving removes the favorite flag; archived contacts no longer appear in Favorites.
 3. **Media on Railway** — Uploaded photos use local disk; redeploys on ephemeral hosting can lose files unless external storage is added.
 4. **Email in production** — Password reset uses the console backend in development; production needs SMTP configuration.
-5. **CDN frontend** — Tailwind and HTMX load from CDNs for simplicity, not offline/air-gapped use.
+5. **CDN frontend** — Tailwind loads from CDN without SRI (runtime compiler); HTMX and Lucide use pinned CDN URLs with integrity attributes. Not suitable for offline/air-gapped use without vendoring.
 6. **No shared address books** — Single-tenant per-user ownership by design (ADR 0003).
 7. **CSV round-trip** — Export/import covers primary scalar fields only; groups, tags, and extra phone/email rows are not preserved in CSV.
+8. **vCard import** — Export-only; no vCard upload parser.
+9. **Client-side HTMX** — Select-all and checkbox handlers are not exercised by the server-side test suite; use manual QA or browser tests for UI regressions.
 
 ## Future Work
 
