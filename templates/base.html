@@ -6,9 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}Address Book Portal{% endblock %}</title>
+  {# Tailwind CDN is a runtime compiler and cannot use a fixed SRI hash; HTMX and Lucide use pinned versions with integrity. #}
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="https://unpkg.com/lucide@0.469.0"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
+          integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+          crossorigin="anonymous"></script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body class="min-h-full bg-slate-50 text-slate-950 antialiased">

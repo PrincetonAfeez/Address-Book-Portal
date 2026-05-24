@@ -22,6 +22,44 @@
         <i data-lucide="contact"></i>
         vCard
       </a>
+      {% if not contact.is_archived %}
+      <form method="post" action="{% url 'contacts:favorite' contact.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="return_to" value="detail">
+        <button class="button-secondary" type="submit" title="Toggle favorite" aria-label="Toggle favorite">
+          <i data-lucide="star" class="{% if contact.is_favorite %}fill-amber-400 text-amber-400{% else %}text-slate-400{% endif %}"></i>
+          {% if contact.is_favorite %}Unfavorite{% else %}Favorite{% endif %}
+        </button>
+      </form>
+      {% endif %}
+      {% if contact.is_archived %}
+        <form method="post" action="{% url 'contacts:restore' contact.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="return_to" value="detail">
+          <button class="button-secondary" type="submit">
+            <i data-lucide="archive-restore"></i>
+            Restore
+          </button>
+        </form>
+        <form method="post" action="{% url 'contacts:purge' contact.pk %}"
+              onsubmit="return confirm('Permanently delete this contact? This cannot be undone.');">
+          {% csrf_token %}
+          <button class="button-secondary danger" type="submit">
+            <i data-lucide="trash-2"></i>
+            Delete permanently
+          </button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'contacts:delete' contact.pk %}"
+              onsubmit="return confirm('Move this contact to archive?');">
+          {% csrf_token %}
+          <input type="hidden" name="return_to" value="detail">
+          <button class="button-secondary danger" type="submit">
+            <i data-lucide="archive"></i>
+            Archive
+          </button>
+        </form>
+      {% endif %}
       <button class="button-primary" hx-get="{% url 'contacts:edit' contact.pk %}" hx-target="#modal-root" hx-swap="innerHTML">
         <i data-lucide="pencil"></i>
         Edit

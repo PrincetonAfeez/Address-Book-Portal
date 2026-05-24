@@ -3,7 +3,7 @@
   <div class="panel">
     <h2 class="filter-title">Views</h2>
     <div class="space-y-1">
-      <a class="filter-link" href="{% url 'contacts:list' %}?{% qs_replace page='' %}">All contacts</a>
+      <a class="filter-link" href="{% url 'contacts:list' %}?{% qs_replace page='' %}">Active contacts</a>
       <a class="filter-link" href="{% url 'contacts:favorites' %}?{% qs_replace page='' %}">Favorites</a>
       <a class="filter-link" href="{% url 'contacts:archive' %}?{% qs_replace page='' %}">Archive</a>
     </div>

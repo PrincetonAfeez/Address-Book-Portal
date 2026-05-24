@@ -24,13 +24,18 @@
         {% for group in groups %}
           <div class="flex items-center justify-between gap-3 py-2">
             <span class="font-medium text-slate-800">{{ group.name }}</span>
-            <form method="post" action="{% url 'contacts:group_delete' group.pk %}"
-                  onsubmit="return confirm('Delete group “{{ group.name|escapejs }}”? Contacts are not deleted.');">
-              {% csrf_token %}
-              <button class="icon-button small danger" type="submit" title="Delete group" aria-label="Delete group">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </form>
+            <div class="flex gap-1">
+              <a class="icon-button small" href="{% url 'contacts:group_edit' group.pk %}" title="Edit group" aria-label="Edit group">
+                <i data-lucide="pencil"></i>
+              </a>
+              <form method="post" action="{% url 'contacts:group_delete' group.pk %}"
+                    onsubmit="return confirm('Delete group “{{ group.name|escapejs }}”? Contacts are not deleted.');">
+                {% csrf_token %}
+                <button class="icon-button small danger" type="submit" title="Delete group" aria-label="Delete group">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </form>
+            </div>
           </div>
         {% empty %}
           <p class="empty-state mt-4">No groups yet.</p>
@@ -55,13 +60,18 @@
         {% for tag in tags %}
           <div class="flex items-center justify-between gap-3 py-2">
             <span class="chip"><span class="h-2 w-2 rounded-full" style="background: {{ tag.color }}"></span>{{ tag.name }}</span>
-            <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}"
-                  onsubmit="return confirm('Delete tag “{{ tag.name|escapejs }}”? Contacts are not deleted.');">
-              {% csrf_token %}
-              <button class="icon-button small danger" type="submit" title="Delete tag" aria-label="Delete tag">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </form>
+            <div class="flex gap-1">
+              <a class="icon-button small" href="{% url 'contacts:tag_edit' tag.pk %}" title="Edit tag" aria-label="Edit tag">
+                <i data-lucide="pencil"></i>
+              </a>
+              <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}"
+                    onsubmit="return confirm('Delete tag “{{ tag.name|escapejs }}”? Contacts are not deleted.');">
+                {% csrf_token %}
+                <button class="icon-button small danger" type="submit" title="Delete tag" aria-label="Delete tag">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </form>
+            </div>
           </div>
         {% empty %}
           <p class="empty-state mt-4">No tags yet.</p>

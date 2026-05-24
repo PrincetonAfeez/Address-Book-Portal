@@ -4,18 +4,7 @@
         action="{% if contact %}{% url 'contacts:edit' contact.pk %}{% else %}{% url 'contacts:create' %}{% endif %}">
     {% csrf_token %}
     {% include "partials/form_errors.html" with form=form %}
-    <div class="grid gap-4 sm:grid-cols-2">
-      {% include "partials/field.html" with field=form.first_name %}
-      {% include "partials/field.html" with field=form.last_name %}
-      {% include "partials/field.html" with field=form.email %}
-      {% include "partials/field.html" with field=form.phone %}
-      {% include "partials/field.html" with field=form.company %}
-      {% include "partials/field.html" with field=form.job_title %}
-      {% include "partials/field.html" with field=form.birthday %}
-      {% include "partials/field.html" with field=form.photo %}
-    </div>
-    {% include "partials/field.html" with field=form.notes %}
-    <label class="flex items-center gap-2 text-sm font-medium text-slate-700">{{ form.is_favorite }} Favorite</label>
+    {% include "contacts/partials/_contact_form_fields.html" with show_organization=False %}
     <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
       <a class="button-secondary" href="{% if contact %}{{ contact.get_absolute_url }}{% else %}{% url 'contacts:list' %}{% endif %}">Cancel</a>
       <button class="button-primary" type="submit">Save</button>

@@ -23,16 +23,16 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <a class="button-secondary" href="{% url 'contacts:csv_export' %}?{% qs_replace mode=mode %}">
+      <a class="button-secondary" href="{% url 'contacts:csv_export' %}?{% qs_replace mode=mode %}{% if selected_count %}&amp;selected=1{% endif %}" title="Export primary scalar fields only">
         <i data-lucide="file-down"></i>
-        CSV
+        Primary CSV{% if selected_count %} ({{ selected_count }}){% endif %}
       </a>
-      <a class="button-secondary" href="{% url 'contacts:vcard_bulk' %}?{% qs_replace mode=mode %}">
+      <a class="button-secondary" href="{% url 'contacts:vcard_bulk' %}?{% qs_replace mode=mode %}{% if selected_count %}&amp;selected=1{% endif %}">
         <i data-lucide="contact"></i>
-        vCard
+        vCard{% if selected_count %} ({{ selected_count }}){% endif %}
       </a>
       <button class="button-primary"
-              hx-get="{% url 'contacts:create' %}?{{ request.GET.urlencode }}&list_mode={{ mode }}"
+              hx-get="{% url 'contacts:create' %}{% qs_with list_mode=mode %}"
               hx-target="#modal-root"
               hx-swap="innerHTML">
         <i data-lucide="plus"></i>
@@ -50,8 +50,10 @@
                 hx-get="{{ request.path }}"
                 hx-target="#contact-table-body"
                 hx-swap="innerHTML"
+                hx-push-url="true"
                 hx-indicator="#table-indicator"
                 hx-trigger="keyup changed delay:250ms from:#search, submit">
+            <label class="sr-only" for="search">Search contacts</label>
             <input id="search" class="input" type="search" name="q" value="{{ query }}" placeholder="Search contacts">
             {% if request.GET.group %}<input type="hidden" name="group" value="{{ request.GET.group }}">{% endif %}
             {% if request.GET.tag %}<input type="hidden" name="tag" value="{{ request.GET.tag }}">{% endif %}

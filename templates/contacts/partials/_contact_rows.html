@@ -1,5 +1,4 @@
 {% if is_htmx %}
-  <span id="selected-count" hx-swap-oob="outerHTML" class="text-sm font-medium text-slate-700">{{ selected_count }} selected</span>
   <p id="contacts-count" hx-swap-oob="outerHTML" class="page-subtitle">
     {% if paginator.count %}
       Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} contacts

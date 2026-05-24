@@ -1,0 +1,18 @@
+<div class="grid gap-4 sm:grid-cols-2">
+  {% include "partials/field.html" with field=form.first_name %}
+  {% include "partials/field.html" with field=form.last_name %}
+  {% include "partials/field.html" with field=form.email %}
+  {% include "partials/field.html" with field=form.phone %}
+  {% include "partials/field.html" with field=form.company %}
+  {% include "partials/field.html" with field=form.job_title %}
+  {% include "partials/field.html" with field=form.birthday %}
+  {% include "partials/field.html" with field=form.photo %}
+</div>
+{% include "partials/field.html" with field=form.notes %}
+{% if show_organization %}
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include "partials/field.html" with field=form.groups %}
+    {% include "partials/field.html" with field=form.tags %}
+  </div>
+{% endif %}
+<label class="flex items-center gap-2 text-sm font-medium text-slate-700">{{ form.is_favorite }} Favorite</label>
