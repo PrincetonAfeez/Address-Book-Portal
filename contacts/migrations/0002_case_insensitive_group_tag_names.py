@@ -1,3 +1,5 @@
+""" Migrations for the contacts app """
+
 from django.db import migrations, models
 from django.db.models.functions import Lower
 
