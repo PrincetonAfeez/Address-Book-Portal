@@ -1,3 +1,5 @@
+""" Test forms extended for the contacts app """
+
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -86,7 +88,13 @@ class FormsExtendedTests(TestCase):
         form = BulkActionForm(user=self.user, list_mode="archive")
         actions = [choice[0] for choice in form.fields["action"].choices]
         self.assertNotIn("archive", actions)
+        self.assertIn("restore", actions)
         self.assertIn("delete", actions)
+
+    def test_bulk_action_form_favorites_mode_includes_unfavorite(self):
+        form = BulkActionForm(user=self.user, list_mode="favorites")
+        actions = [choice[0] for choice in form.fields["action"].choices]
+        self.assertIn("unfavorite", actions)
 
     def test_contact_form_sync_primary_records_email(self):
         contact = Contact.objects.create(
@@ -101,7 +109,12 @@ class FormsExtendedTests(TestCase):
 
     def test_contact_form_clears_phone_sync(self):
         contact = Contact.objects.create(owner=self.user, first_name="Ada", phone="+14155552671")
-        Phone.objects.create(contact=contact, number="+14155552671", label=Phone.MOBILE)
+        Phone.objects.create(
+            contact=contact,
+            number="+14155552671",
+            label=Phone.MOBILE,
+            is_scalar_sync=True,
+        )
         form = ContactForm(
             data={
                 "first_name": "Ada",
@@ -118,7 +131,28 @@ class FormsExtendedTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         saved = form.save()
         form.sync_primary_records(saved)
-        self.assertFalse(saved.phones.exists())
+        self.assertFalse(saved.phones.filter(is_scalar_sync=True).exists())
+
+    def test_sync_primary_records_preserves_unmanaged_mobile(self):
+        contact = Contact.objects.create(owner=self.user, first_name="Ada", phone="+14155552671")
+        Phone.objects.create(
+            contact=contact,
+            number="+14155559999",
+            label=Phone.WORK,
+        )
+        admin_mobile = Phone.objects.create(
+            contact=contact,
+            number="+14155558888",
+            label=Phone.MOBILE,
+            is_scalar_sync=False,
+        )
+        form = ContactForm(instance=contact)
+        form.sync_primary_records(contact)
+        self.assertTrue(contact.phones.filter(pk=admin_mobile.pk).exists())
+        self.assertEqual(
+            contact.phones.get(is_scalar_sync=True).number,
+            "+14155552671",
+        )
 
     def test_contact_form_clean_phone_empty(self):
         form = ContactForm(data={"first_name": "Ada", "phone": ""})
