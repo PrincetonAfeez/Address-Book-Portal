@@ -1,3 +1,5 @@
+""" Test import export for the contacts app """
+
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -70,6 +72,19 @@ class ImportExportTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
+
+    def test_csv_export_prefixes_formula_like_fields(self):
+        Contact.objects.create(
+            owner=self.user,
+            first_name="=SUM(A1)",
+            company="+Acme",
+            notes="@mention",
+        )
+        rows = list(csv_contact_rows(Contact.objects.for_user(self.user)))
+        data_row = rows[-1]
+        self.assertIn("'=SUM(A1)", data_row)
+        self.assertIn("'+Acme", data_row)
+        self.assertIn("'@mention", data_row)
 
     def test_csv_import_partially_succeeds_and_reports_row_errors(self):
         uploaded = SimpleUploadedFile(
