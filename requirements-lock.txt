@@ -1,0 +1,17 @@
+# Pinned versions verified on Python 3.12 (see README "Last verified").
+# Reproducible install:
+#   pip install -r requirements-lock.txt
+# Production only (first section). Dev/CI tools are in the optional block below.
+
+# --- Production runtime ---
+Django==5.2.14
+Pillow==12.2.0
+psycopg[binary]==3.3.4
+python-dotenv==1.2.2
+gunicorn==26.0.0
+whitenoise==6.12.0
+
+# --- Development / CI (optional) ---
+coverage==7.13.5
+pytest==8.4.2
+pytest-django==4.12.0

@@ -41,10 +41,11 @@ omit = [
     "manage.py",
     "config/asgi.py",
     "config/wsgi.py",
+    "config/settings/prod.py",
 ]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
 precision = 1
-fail_under = 85
+fail_under = 90

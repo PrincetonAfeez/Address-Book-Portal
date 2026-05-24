@@ -1,5 +1,7 @@
 # Address Book Portal
 
+[![CI](https://github.com/PrincetonAfeez/Address-Book-Portal/actions/workflows/ci.yml/badge.svg)](https://github.com/PrincetonAfeez/Address-Book-Portal/actions/workflows/ci.yml)
+
 A Django 5 address book with server-rendered templates, HTMX interactions, per-user contact ownership, CSV import/export, vCard export, and soft archive behavior.
 
 ## Stack
@@ -14,7 +16,10 @@ A Django 5 address book with server-rendered templates, HTMX interactions, per-u
 
 ## Local Setup
 
-Dependencies are defined in [`pyproject.toml`](pyproject.toml). Use an editable install so pytest and coverage pick up project settings from the same file.
+Dependencies are defined in [`pyproject.toml`](pyproject.toml). For a **pinned** environment matching CI verification, use [`requirements-lock.txt`](requirements-lock.txt). Editable install is recommended for development so pytest and coverage pick up project settings.
+
+<details>
+<summary>Windows (PowerShell)</summary>
 
 ```powershell
 python -m venv .venv
@@ -27,10 +32,28 @@ python manage.py loaddata seed_data
 python manage.py runserver
 ```
 
-Production-only install (no test tools):
+</details>
 
-```powershell
-pip install -r requirements.txt
+<details>
+<summary>macOS / Linux (Bash)</summary>
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+cp .env.example .env
+python manage.py migrate
+python manage.py loaddata seed_data
+python manage.py runserver
+```
+
+</details>
+
+Production-only install (pinned):
+
+```bash
+pip install -r requirements-lock.txt
 ```
 
 The seed user is `demo` with password `demo-password` (local development only — change or remove before any public deployment).
@@ -39,22 +62,42 @@ The seed user is `demo` with password `demo-password` (local development only �
 
 ## Useful Commands
 
-```powershell
+```bash
 python manage.py test
-pytest
-coverage run manage.py test
-coverage report
+pytest -q
+coverage run -m pytest -q && coverage report
 python manage.py createsuperuser
 python manage.py collectstatic
 ```
 
-**Test suite:** 319 tests (all passing). **Line coverage:** 97%+ on `contacts` + `config` — see [docs/TESTING.md](docs/TESTING.md).
+**Test suite:** 377 tests (pytest). **Line coverage:** 95%+ on measured application code (`contacts` + `config`, excluding `prod.py`; CI floor 90%) — see [docs/TESTING.md](docs/TESTING.md).
+
+### Last verified
+
+| Field | Value |
+|-------|-------|
+| Commit | `dc63ef8` (audit fixes; commit when ready) |
+| Date | 2026-05-24 |
+| Python | 3.12 |
+| Django | 5.2.14 |
+| Tests | `377 passed` (`pytest -q`) |
+| Coverage | `95.0%` (`coverage run -m pytest -q && coverage report`) |
+
+Reproduce locally:
+
+```bash
+pytest -q
+coverage run -m pytest -q && coverage report
+```
 
 ## Documentation
 
 - [Project report (limitations & future work)](docs/REPORT.md)
 - [Requirements traceability matrix](docs/TRACEABILITY.md)
+- [Security overview](docs/SECURITY.md)
+- [Schema / ERD reference](docs/SCHEMA.md)
 - [Testing & coverage](docs/TESTING.md)
+- [Deployment & reproducibility](docs/DEPLOYMENT.md)
 - [ADR 0001 — HTMX over SPA](docs/adr/0001-htmx-over-spa.md)
 - [ADR 0002 — Hand-rolled phone & vCard](docs/adr/0002-hand-rolled-phone-and-vcard.md)
 - [ADR 0003 — Per-user ownership over RBAC](docs/adr/0003-per-user-ownership-over-rbac.md)
@@ -73,14 +116,18 @@ python manage.py collectstatic
 
 ## Deployment Notes
 
-Set `DJANGO_SETTINGS_MODULE=config.settings.prod` in production (already the default in `config/wsgi.py`). Railway can use the included `railway.json` start command. Configure at minimum:
+Set `DJANGO_SETTINGS_MODULE=config.settings.prod` in production (already the default in `config/wsgi.py`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Railway/Heroku configs, release vs start commands, pinned dependencies, and media limitations.
 
-- `DJANGO_SECRET_KEY`
+Configure at minimum:
+
+- `DJANGO_SECRET_KEY` (generate — see `.env.example`)
 - `DATABASE_URL`
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_CSRF_TRUSTED_ORIGINS`
 
-Contact photos are served at `/contacts/<id>/photo/` behind login and ownership checks — not as public `/media/` files.
+Optional: `DJANGO_HSTS_INCLUDE_SUBDOMAINS`, `DJANGO_HSTS_PRELOAD` (default **off** for demo domains).
+
+Contact photos use **local disk**; ephemeral hosts may lose uploads on redeploy unless object storage is added (documented limitation).
 
 For password reset email in production, configure your SMTP settings via Django's email environment variables or a provider backend.
 

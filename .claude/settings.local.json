@@ -9,7 +9,8 @@
       "Bash(python -m coverage run manage.py test --verbosity=1)",
       "Bash(python -m coverage report)",
       "Bash(python -)",
-      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Python\\\\Address Book Portal\" diff --stat HEAD)"
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Python\\\\Address Book Portal\" diff --stat HEAD)",
+      "Bash(python -m pytest --tb=short -q)"
     ]
   }
 }
