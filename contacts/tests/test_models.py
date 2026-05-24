@@ -1,3 +1,5 @@
+""" Test models for the contacts app """
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -53,3 +55,23 @@ class ContactModelTests(TestCase):
         Group.objects.create(owner=self.user, name="Friends")
         with self.assertRaises(ValidationError):
             Group.objects.create(owner=self.user, name="friends")
+
+    def test_group_name_strips_whitespace_on_save(self):
+        group = Group.objects.create(owner=self.user, name="  VIP  ")
+        self.assertEqual(group.name, "VIP")
+
+    def test_group_whitespace_duplicate_collapses_to_unique_violation(self):
+        Group.objects.create(owner=self.user, name="VIP")
+        with self.assertRaises(ValidationError):
+            Group.objects.create(owner=self.user, name=" VIP ")
+
+    def test_contact_clean_binds_invalid_phone_to_field(self):
+        contact = Contact(owner=self.user, first_name="Ada", phone="not-a-phone")
+        with self.assertRaises(ValidationError) as ctx:
+            contact.full_clean()
+        self.assertIn("phone", ctx.exception.message_dict)
+
+    def test_create_validated_persists_contact(self):
+        contact = Contact.create_validated(owner=self.user, first_name="Ada", phone="(415) 555-2671")
+        self.assertEqual(contact.phone, "+14155552671")
+        self.assertTrue(Contact.objects.filter(pk=contact.pk).exists())
