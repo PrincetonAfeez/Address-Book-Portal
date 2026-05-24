@@ -1,3 +1,5 @@
+""" Test database settings """
+
 from django.test import SimpleTestCase
 
 from config.database import postgres_from_url
