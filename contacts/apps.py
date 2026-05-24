@@ -1,5 +1,6 @@
-from django.apps import AppConfig
+""" Apps for the contacts app """
 
+from django.apps import AppConfig
 
 class ContactsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"

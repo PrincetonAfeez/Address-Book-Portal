@@ -1,7 +1,20 @@
+""" Session selection for the contacts app """
+
 SELECTED_SESSION_KEY = "selected_contact_ids"
 SESSION_USER_KEY = "selected_contact_user_id"
 IMPORT_ERRORS_SESSION_KEY = "last_import_errors"
 IMPORT_ERRORS_USER_KEY = "last_import_errors_user_id"
+
+def get_selected_ids(request):
+    if not request or not hasattr(request, "session"):
+        return set()
+    user = getattr(request, "user", None)
+    if not getattr(user, "is_authenticated", False):
+        return set()
+    bound = request.session.get(SESSION_USER_KEY)
+    if bound != str(user.pk):
+        return set()
+    return set(request.session.get(SELECTED_SESSION_KEY, []))
 
 
 def clear_selected_ids(request):

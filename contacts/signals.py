@@ -1,6 +1,9 @@
+""" Signals for the contacts app """
+
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.core.exceptions import ValidationError
-from django.db.models.signals import m2m_changed
+from django.core.files.storage import default_storage
+from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
 from .models import Contact, Group, Tag
@@ -11,8 +14,6 @@ from .session_selection import (
     bind_selection_user,
     clear_import_errors,
     clear_selected_ids,
-    get_import_errors,
-    set_import_errors,
 )
 
 
@@ -72,3 +73,19 @@ def clear_session_on_logout(sender, request, user, **kwargs):
         request.session.pop(SESSION_USER_KEY, None)
         request.session.pop(IMPORT_ERRORS_USER_KEY, None)
         request.session.modified = True
+
+
+@receiver(pre_delete, sender=Contact)
+def delete_contact_photo_file(sender, instance, **kwargs):
+    if instance.photo:
+        instance.photo.delete(save=False)
+
+
+@receiver(pre_save, sender=Contact)
+def delete_replaced_contact_photo(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    previous = Contact.all_objects.filter(pk=instance.pk).values_list("photo", flat=True).first()
+    new_name = instance.photo.name if instance.photo else ""
+    if previous and previous != new_name:
+        default_storage.delete(previous)

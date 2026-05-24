@@ -1,12 +1,15 @@
+""" Models for the contacts app """
+
 import logging
+import uuid
 from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
-from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 
@@ -33,7 +36,12 @@ class OwnedQuerySet(models.QuerySet):
         return self.filter(is_archived=True) if hasattr(self.model, "is_archived") else self
 
     def favorites(self):
-        return self.filter(is_favorite=True)
+        if not hasattr(self.model, "is_favorite"):
+            return self
+        qs = self.filter(is_favorite=True)
+        if hasattr(self.model, "is_archived"):
+            qs = qs.filter(is_archived=False)
+        return qs
 
     def search(self, query):
         if not query:
@@ -51,15 +59,18 @@ class OwnedQuerySet(models.QuerySet):
 
 class OwnedManager(models.Manager.from_queryset(OwnedQuerySet)):
     def get_for_user_or_404(self, user, **kwargs):
-        try:
-            return self.for_user(user).get(**kwargs)
-        except self.model.DoesNotExist as exc:
-            if self.model.all_objects.filter(**kwargs).exists():
-                raise PermissionDenied("You do not have access to this resource.") from exc
-            raise Http404 from exc
+        return get_object_or_404(self.for_user(user), **kwargs)
 
 
 class Contact(models.Model):
+    """Per-user contact record.
+
+    Validation runs on ``save()`` via ``full_clean()``. ``QuerySet.update()`` and
+    bulk SQL bypass model validation; portal code should use ``save()``,
+    ``ContactForm``, or ``create_validated()`` instead.
+    """
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=80)
     last_name = models.CharField(max_length=80, blank=True)
@@ -111,6 +122,9 @@ class Contact(models.Model):
     def display_phone(self):
         if self.phone:
             return self.phone
+        mobile = self.phones.filter(label=Phone.MOBILE).first()
+        if mobile:
+            return mobile.number
         phone = self.phones.first()
         return phone.number if phone else ""
 
@@ -122,14 +136,40 @@ class Contact(models.Model):
         return email.address if email else ""
 
     def clean(self):
+        self.first_name = (self.first_name or "").strip()
+        if not self.first_name:
+            raise ValidationError({"first_name": "First name is required."})
+        if self.email:
+            self.email = self.email.strip().lower()
         if self.phone:
-            self.phone = normalize_phone_number(self.phone)
+            try:
+                self.phone = normalize_phone_number(self.phone)
+            except ValidationError as exc:
+                raise ValidationError({"phone": exc.messages}) from exc
+
+    @classmethod
+    def create_validated(cls, **kwargs):
+        contact = cls(**kwargs)
+        contact.save()
+        return contact
 
     def save(self, *args, **kwargs):
         resize_photo = kwargs.pop("resize_photo", False)
         update_fields = kwargs.get("update_fields")
         if self.phone and (update_fields is None or "phone" in update_fields):
-            self.phone = normalize_phone_number(self.phone)
+            try:
+                self.phone = normalize_phone_number(self.phone)
+            except ValidationError as exc:
+                raise ValidationError({"phone": exc.messages}) from exc
+        if update_fields is None:
+            self.full_clean()
+        else:
+            exclude = [
+                field.name
+                for field in self._meta.fields
+                if field.name not in update_fields and field.name != "id"
+            ]
+            self.full_clean(exclude=exclude)
         super().save(*args, **kwargs)
         if self.photo and resize_photo:
             self._resize_photo()
@@ -138,18 +178,28 @@ class Contact(models.Model):
         if not self.photo:
             return
         try:
+            import io
+
+            from django.core.files.base import ContentFile
             from PIL import Image
 
-            with Image.open(self.photo.path) as image:
-                image.thumbnail((800, 800))
-                image.save(self.photo.path)
+            with self.photo.open("rb") as photo_file:
+                with Image.open(photo_file) as image:
+                    image.thumbnail((800, 800))
+                    image_format = image.format or "JPEG"
+                    buffer = io.BytesIO()
+                    image.save(buffer, format=image_format)
+            buffer.seek(0)
+            self.photo.save(self.photo.name, ContentFile(buffer.read()), save=False)
+            super().save(update_fields=["photo"])
         except (OSError, ValueError) as exc:
             logger.warning("Photo resize failed for contact %s: %s", self.pk, exc)
             return
 
     def soft_delete(self):
         self.is_archived = True
-        self.save(update_fields=["is_archived", "updated_at"])
+        self.is_favorite = False
+        self.save(update_fields=["is_archived", "is_favorite", "updated_at"])
 
     def restore(self):
         self.is_archived = False
@@ -169,6 +219,10 @@ class Phone(models.Model):
     contact = models.ForeignKey(Contact, related_name="phones", on_delete=models.CASCADE)
     number = models.CharField(max_length=32, validators=[validate_phone_number])
     label = models.CharField(max_length=16, choices=LABEL_CHOICES, default=MOBILE)
+    is_scalar_sync = models.BooleanField(
+        default=False,
+        help_text="Managed by Contact.phone via sync_primary_records().",
+    )
 
     class Meta:
         ordering = ["id"]
@@ -177,7 +231,11 @@ class Phone(models.Model):
         return f"{self.get_label_display()}: {self.number}"
 
     def clean(self):
-        self.number = normalize_phone_number(self.number)
+        if self.number:
+            try:
+                self.number = normalize_phone_number(self.number)
+            except ValidationError as exc:
+                raise ValidationError({"number": exc.messages}) from exc
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -197,9 +255,20 @@ class Email(models.Model):
     contact = models.ForeignKey(Contact, related_name="emails", on_delete=models.CASCADE)
     address = models.EmailField()
     label = models.CharField(max_length=16, choices=LABEL_CHOICES, default=OTHER)
+    is_scalar_sync = models.BooleanField(
+        default=False,
+        help_text="Managed by Contact.email via sync_primary_records().",
+    )
 
     class Meta:
         ordering = ["id"]
+
+    def clean(self):
+        self.address = (self.address or "").strip().lower()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_label_display()}: {self.address}"
@@ -221,6 +290,11 @@ class Group(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        if self.name:
+            self.name = self.name.strip()
+        super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -246,7 +320,10 @@ class Tag(models.Model):
         return self.name
 
     def clean(self):
+        if self.name:
+            self.name = self.name.strip()
         validate_hex_color(self.color)
+        super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()

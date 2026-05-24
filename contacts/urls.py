@@ -1,3 +1,5 @@
+""" URLs for the contacts app """
+
 from django.urls import path
 
 from . import views
@@ -15,10 +17,13 @@ urlpatterns = [
     path("contacts/<int:pk>/edit/", views.contact_update, name="edit"),
     path("contacts/<int:pk>/delete/", views.contact_delete, name="delete"),
     path("contacts/<int:pk>/restore/", views.contact_restore, name="restore"),
+    path("contacts/<int:pk>/purge/", views.contact_permanent_delete, name="purge"),
     path("contacts/<int:pk>/favorite/", views.contact_toggle_favorite, name="favorite"),
     path("contacts/<int:pk>/vcard/", views.vcard_export_one, name="vcard_one"),
     path("organization/", views.organization, name="organization"),
+    path("organization/groups/<int:pk>/edit/", views.group_edit, name="group_edit"),
     path("organization/groups/<int:pk>/delete/", views.group_delete, name="group_delete"),
+    path("organization/tags/<int:pk>/edit/", views.tag_edit, name="tag_edit"),
     path("organization/tags/<int:pk>/delete/", views.tag_delete, name="tag_delete"),
     path("selection/toggle/", views.selection_toggle, name="selection_toggle"),
     path("selection/clear/", views.selection_clear, name="selection_clear"),

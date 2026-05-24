@@ -1,18 +1,22 @@
 """CSV and vCard export helpers.
 
-CSV export/import covers primary scalar contact fields only — not groups, tags,
-favorite/archive flags, or secondary phone/email rows. See docs/REPORT.md.
+Primary-fields CSV export/import covers scalar contact columns only — not groups,
+tags, favorite/archive flags, or secondary phone/email rows. See docs/REPORT.md.
 """
 
 import base64
 import csv
 import mimetypes
+from datetime import timezone as dt_timezone
+
+from django.utils import timezone
 
 from .csv_utils import CsvEcho
 from .models import Email, Phone
 
 
 Echo = CsvEcho
+UTF8_BOM = "\ufeff"
 
 
 PHONE_VCARD_TYPES = {
@@ -22,7 +26,16 @@ PHONE_VCARD_TYPES = {
 }
 
 
+DANGEROUS_PREFIXES = ("=", "+", "-", "@")
+
+
+def safe_csv_cell(value):
+    text = str(value or "")
+    return "'" + text if text.startswith(DANGEROUS_PREFIXES) else text
+
+
 def csv_contact_rows(queryset):
+    yield UTF8_BOM
     writer = csv.writer(Echo())
     yield writer.writerow(
         [
@@ -36,17 +49,17 @@ def csv_contact_rows(queryset):
             "Notes",
         ]
     )
-    for contact in queryset.iterator(chunk_size=500):
+    for contact in queryset.prefetch_related("phones", "emails").iterator(chunk_size=500):
         yield writer.writerow(
             [
-                contact.first_name,
-                contact.last_name,
-                contact.email,
-                contact.phone,
-                contact.company,
-                contact.job_title,
+                safe_csv_cell(contact.first_name),
+                safe_csv_cell(contact.last_name),
+                safe_csv_cell(contact.display_email),
+                safe_csv_cell(contact.display_phone),
+                safe_csv_cell(contact.company),
+                safe_csv_cell(contact.job_title),
                 contact.birthday.isoformat() if contact.birthday else "",
-                contact.notes,
+                safe_csv_cell(contact.notes),
             ]
         )
 
@@ -117,9 +130,13 @@ def _vcard_photo_line(contact):
 
 
 def contact_to_vcard(contact):
+    rev = timezone.localtime(contact.updated_at, dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
+        "PRODID:-//Address Book Portal//EN",
+        f"UID:{contact.uuid}@address-book-portal",
+        f"REV:{rev}",
         f"N:{escape_vcard(contact.last_name)};{escape_vcard(contact.first_name)};;;",
         f"FN:{escape_vcard(contact.display_name)}",
     ]
@@ -127,13 +144,17 @@ def contact_to_vcard(contact):
         lines.append(f"ORG:{escape_vcard(contact.company)}")
     if contact.job_title:
         lines.append(f"TITLE:{escape_vcard(contact.job_title)}")
+    exported_emails = set()
     for email in contact.emails.all():
         lines.append(format_vcard_email(email.address, email.label))
-    if contact.email and not contact.emails.exists():
+        exported_emails.add(email.address)
+    if contact.email and contact.email not in exported_emails:
         lines.append(format_vcard_email(contact.email, Email.OTHER))
+    exported_phones = set()
     for phone in contact.phones.all():
         lines.append(format_vcard_phone(phone.number, phone.label))
-    if contact.phone and not contact.phones.exists():
+        exported_phones.add(phone.number)
+    if contact.phone and contact.phone not in exported_phones:
         lines.append(format_vcard_phone(contact.phone, Phone.MOBILE))
     if contact.birthday:
         lines.append(f"BDAY:{contact.birthday.isoformat()}")

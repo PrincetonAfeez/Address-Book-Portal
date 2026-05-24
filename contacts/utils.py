@@ -1,5 +1,6 @@
-from datetime import date, timedelta
+""" Utils for the contacts app """
 
+from datetime import date, timedelta
 
 def birthday_in_year(birthday, year):
     try:

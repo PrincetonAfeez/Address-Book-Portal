@@ -1,3 +1,5 @@
+""" Admin for the contacts app """
+
 from django.contrib import admin
 
 from .forms import ContactForm
@@ -97,8 +99,14 @@ class ContactAdmin(OwnerScopedAdmin):
         )
 
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        ContactForm(instance=obj).sync_primary_records(obj)
+        if not change and hasattr(obj, "owner_id") and not obj.owner_id:
+            obj.owner = request.user
+        resize_photo = bool(form and "photo" in form.changed_data and obj.photo)
+        obj.save(resize_photo=resize_photo)
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        ContactForm(instance=form.instance, user=request.user).sync_primary_records(form.instance)
 
 
 @admin.register(Group)
@@ -149,6 +157,11 @@ class RelatedContactAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(contact__owner=request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "contact" and not request.user.is_superuser:
+            kwargs["queryset"] = Contact.objects.for_user(request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 admin.site.register(Phone, RelatedContactAdmin)
