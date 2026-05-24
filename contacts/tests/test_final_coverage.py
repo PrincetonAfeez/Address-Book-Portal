@@ -1,3 +1,5 @@
+""" Test final coverage for the contacts app """
+
 import importlib
 from pathlib import Path
 from unittest.mock import patch
